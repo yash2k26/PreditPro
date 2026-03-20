@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { QuoteResult } from "@repo/shared-types";
+import type { AggregatedBook, QuoteResult } from "@repo/shared-types";
 import { formatDollars, formatPrice, formatSize } from "../../lib/format";
 import { FillBreakdown } from "./FillBreakdown";
 
 interface QuotePanelProps {
   onRequestQuote: (amount: number, side: "yes" | "no") => void;
   quote: QuoteResult | null;
+  book?: AggregatedBook | null;
 }
 
 const PRESET_AMOUNTS = [100, 500, 1000];
 
-export function QuotePanel({ onRequestQuote, quote }: QuotePanelProps) {
+export function QuotePanel({ onRequestQuote, quote, book }: QuotePanelProps) {
   const [amount, setAmount] = useState("");
   const [side, setSide] = useState<"yes" | "no">("yes");
 
@@ -50,23 +51,33 @@ export function QuotePanel({ onRequestQuote, quote }: QuotePanelProps) {
         <div className="depth-segment flex gap-2 rounded-xl p-1">
           <button
             onClick={() => setSide("yes")}
-            className={`flex-1 h-9 text-[13px] font-semibold rounded-xl transition-colors ${
+            className={`flex-1 h-10 flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-xl transition-colors ${
               side === "yes"
                 ? "bg-bid/15 text-bid border-2 border-bid"
                 : "bg-transparent text-text-secondary border-2 border-transparent hover:text-text-primary"
             }`}
           >
             Buy Yes
+            {book?.bestAsk != null && (
+              <span className={`text-[11px] font-medium tabular-nums ${side === "yes" ? "text-bid/70" : "text-text-muted"}`}>
+                {(book.bestAsk * 100).toFixed(0)}¢
+              </span>
+            )}
           </button>
           <button
             onClick={() => setSide("no")}
-            className={`flex-1 h-9 text-[13px] font-semibold rounded-xl transition-colors ${
+            className={`flex-1 h-10 flex items-center justify-center gap-1.5 text-[13px] font-semibold rounded-xl transition-colors ${
               side === "no"
                 ? "bg-ask/15 text-ask border-2 border-ask"
                 : "bg-transparent text-text-secondary border-2 border-transparent hover:text-text-primary"
             }`}
           >
             Buy No
+            {book?.bestBid != null && (
+              <span className={`text-[11px] font-medium tabular-nums ${side === "no" ? "text-ask/70" : "text-text-muted"}`}>
+                {((1 - book.bestBid) * 100).toFixed(0)}¢
+              </span>
+            )}
           </button>
         </div>
 

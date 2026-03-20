@@ -145,7 +145,7 @@ export function OrderBook({ aggregated, venues }: OrderBookProps) {
             {askRows.map((row) => (
               <div key={`ask-${row.price}`} className="relative grid grid-cols-3 items-center px-2 py-1 text-[12px] font-medium tabular-nums">
                 <div
-                  className="absolute inset-y-[1px] right-1 rounded-sm bg-rose-500/18"
+                  className="absolute inset-y-px right-1 rounded-sm bg-rose-500/18 transition-[width] duration-300 ease-out"
                   style={{ width: `${row.barPct}%` }}
                 />
                 <span className="relative z-10 text-ask">{formatPrice(row.price)}</span>
@@ -163,7 +163,7 @@ export function OrderBook({ aggregated, venues }: OrderBookProps) {
             {bidRows.map((row) => (
               <div key={`bid-${row.price}`} className="relative grid grid-cols-3 items-center px-2 py-1 text-[12px] font-medium tabular-nums">
                 <div
-                  className="absolute inset-y-[1px] left-1 rounded-sm bg-emerald-500/20"
+                  className="absolute inset-y-px left-1 rounded-sm bg-emerald-500/20 transition-[width] duration-300 ease-out"
                   style={{ width: `${row.barPct}%` }}
                 />
                 <span className="relative z-10 text-bid">{formatPrice(row.price)}</span>

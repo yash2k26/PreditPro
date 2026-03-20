@@ -17,7 +17,7 @@ export interface PricePoint {
   no: number;  // 1 - bestBid (NO price)
 }
 
-const MAX_HISTORY = 300;
+const MAX_HISTORY = 600;
 
 export interface OrderBookState {
   market: MarketInfo | null;
@@ -53,15 +53,18 @@ export function useOrderBook() {
     switch (msg.type) {
       case "book_snapshot": {
         const pt = extractPricePoint(msg.data.aggregated);
-        setState(prev => ({
-          ...prev,
-          market: msg.data.market,
-          aggregated: msg.data.aggregated,
-          venues: msg.data.venues,
-          health: {},
-          lastQuote: null,
-          priceHistory: pt ? [pt] : [],
-        }));
+        setState(prev => {
+          const marketChanged = prev.market?.id !== msg.data.market.id;
+          return {
+            ...prev,
+            market: msg.data.market,
+            aggregated: msg.data.aggregated,
+            venues: msg.data.venues,
+            health: marketChanged ? {} : prev.health,
+            lastQuote: marketChanged ? null : prev.lastQuote,
+            priceHistory: marketChanged ? (pt ? [pt] : []) : (pt ? [...prev.priceHistory.slice(-(MAX_HISTORY - 1)), pt] : prev.priceHistory),
+          };
+        });
         break;
       }
 
@@ -95,5 +98,16 @@ export function useOrderBook() {
     }
   }, []);
 
-  return { state, handleMessage };
+  const seedHistory = useCallback((points: PricePoint[]) => {
+    if (points.length === 0) return;
+    setState(prev => ({
+      ...prev,
+      priceHistory: [
+        ...points,
+        ...prev.priceHistory,
+      ].slice(-MAX_HISTORY),
+    }));
+  }, []);
+
+  return { state, handleMessage, seedHistory };
 }

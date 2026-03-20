@@ -32,7 +32,6 @@ export const SECTION_ORDER: SectionKey[] = [
   "tech",
   "world",
   "culture",
-  "other",
 ];
 
 export const CATEGORY_SECTIONS: SectionKey[] = [

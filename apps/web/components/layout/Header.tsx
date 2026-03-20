@@ -1,10 +1,98 @@
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { flushSync } from "react-dom";
+import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { SECTION_LABEL, SECTION_ORDER } from "../../lib/market-sections";
+
+function CategoryNav() {
+  const pathname = usePathname();
+  const activeSection = pathname === "/" ? "trending" : pathname.startsWith("/category/") ? (pathname.split("/")[2] ?? null) : null;
+  const [hoverCat, setHoverCat] = useState<string | null>(activeSection);
+
+  // Sync when route changes
+  useEffect(() => {
+    setHoverCat(activeSection);
+  }, [activeSection]);
+
+  return (
+    <div className="w-full px-6 pb-3">
+      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+        {SECTION_ORDER.map((section, idx) => {
+          const href = section === "trending" ? "/" : `/category/${section}`;
+          const isTrending = section === "trending";
+
+          return (
+            <motion.div
+              key={section}
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 + idx * 0.03, duration: 0.3 }}
+              onMouseEnter={() => setHoverCat(section)}
+              onMouseLeave={() => setHoverCat(activeSection ?? null)}
+              whileHover={isTrending ? "hover" : undefined}
+              className="relative overflow-hidden"
+            >
+              {hoverCat === section && hoverCat !== activeSection && (
+                <motion.div
+                  layoutId="cat-hover"
+                  className="absolute inset-0 rounded-[10px] bg-surface-hover/60 border border-border/40"
+                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                />
+              )}
+              {activeSection === section && (
+                <motion.div
+                  layoutId="cat-active"
+                  className="absolute inset-0 rounded-[10px] nav-depth-pill-active"
+                  style={{ inset: 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              )}
+              <Link
+                href={href}
+                className="nav-depth-pill relative z-10 whitespace-nowrap px-4 py-2 text-[13px] font-semibold inline-flex items-center gap-1.5"
+              >
+                {isTrending && (
+                  <motion.svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.8"
+                    stroke="currentColor"
+                    className="w-3.5 h-3.5"
+                    variants={{
+                      hover: {
+                        x: [0, 3, -1.5, 0],
+                        y: [0, -3, 1.5, 0],
+                        transition: { duration: 0.8, ease: "easeInOut" as const },
+                      },
+                    }}
+                  >
+                    <motion.path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"
+                      initial={{ strokeDasharray: "60 60", strokeDashoffset: 0 }}
+                      variants={{
+                        hover: {
+                          strokeDashoffset: [0, -60],
+                          transition: { duration: 0.8, ease: [0.4, 0, 0.2, 1] },
+                        },
+                      }}
+                    />
+                  </motion.svg>
+                )}
+                {SECTION_LABEL[section]}
+              </Link>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function Header() {
   type Theme = "dark" | "light";
@@ -144,19 +232,7 @@ export function Header() {
         </div>
       </div>
 
-      <div className="w-full px-6 pb-3">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-          {SECTION_ORDER.map((section) => (
-            <Link
-              key={section}
-              href={`/#${section}`}
-              className="nav-depth-pill whitespace-nowrap px-4 py-2 text-[13px] font-semibold"
-            >
-              {SECTION_LABEL[section]}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <CategoryNav />
     </header>
   );
 }

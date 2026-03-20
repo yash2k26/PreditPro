@@ -5,6 +5,7 @@ import { config } from "./config.ts";
 import { WsServer } from "./ws/server.ts";
 import { MarketCache } from "./markets/cache.ts";
 import { VenueWorkerHandle } from "./workers/venue-worker-handle.ts";
+import { fetchPolymarketHistory, fetchKalshiHistory } from "./markets/venue-history.ts";
 
 async function main(): Promise<void> {
   const app = express();
@@ -57,6 +58,44 @@ async function main(): Promise<void> {
     const hours = Math.min(48, Math.max(1, parseInt(String(req.query["hours"] ?? "24"), 10)));
     const points = marketCache.priceHistory.get(req.params["id"]!, hours);
     res.json({ points });
+  });
+
+  // Fetch actual venue price history from Polymarket CLOB / Kalshi APIs
+  app.get("/api/markets/:id/venue-history", async (req, res) => {
+    const market = marketCache.getById(req.params["id"]!);
+    if (!market) {
+      res.status(404).json({ error: "Market not found" });
+      return;
+    }
+    const interval = typeof req.query["interval"] === "string" ? req.query["interval"] : "all";
+    const venue = typeof req.query["venue"] === "string" ? req.query["venue"] : undefined;
+
+    const result: Record<string, Array<{ t: number; y: number }>> = {};
+
+    const polyVenue = market.venues.find((v) => v.venue === "polymarket");
+    const kalshiVenue = market.venues.find((v) => v.venue === "kalshi");
+
+    // Fetch in parallel, filtered by venue if specified
+    const promises: Promise<void>[] = [];
+
+    if (polyVenue?.tokenIds?.[0] && (!venue || venue === "polymarket")) {
+      promises.push(
+        fetchPolymarketHistory(polyVenue.tokenIds[0], interval).then((pts) => {
+          result.polymarket = pts;
+        })
+      );
+    }
+
+    if (kalshiVenue?.ticker && (!venue || venue === "kalshi")) {
+      promises.push(
+        fetchKalshiHistory(kalshiVenue.ticker, interval).then((pts) => {
+          result.kalshi = pts;
+        })
+      );
+    }
+
+    await Promise.allSettled(promises);
+    res.json(result);
   });
 
   const httpServer = createServer(app);

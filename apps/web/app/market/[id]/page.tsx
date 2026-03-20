@@ -1,8 +1,8 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useWebSocket } from "../../../hooks/useWebSocket";
-import { useOrderBook } from "../../../hooks/useOrderBook";
+import { useOrderBook, type PricePoint } from "../../../hooks/useOrderBook";
 import { useQuote } from "../../../hooks/useQuote";
 import { MarketHeader } from "../../../components/market/MarketHeader";
 import { VenueStatus } from "../../../components/market/VenueStatus";
@@ -10,6 +10,10 @@ import { OrderBook } from "../../../components/order-book/OrderBook";
 import { DepthChart } from "../../../components/order-book/DepthChart";
 import { QuotePanel } from "../../../components/quote/QuotePanel";
 import { PriceChart } from "../../../components/market/PriceChart";
+import { ProbabilityChart } from "../../../components/market/ProbabilityChart";
+import { CryptoChartPanel } from "../../../components/market/CryptoChartPanel";
+import { useBinance, detectBinanceSymbol } from "../../../hooks/useBinance";
+import { useMemo } from "react";
 
 function HeaderSkeleton() {
   return (
@@ -85,18 +89,65 @@ export default function MarketPage({
 }) {
   const { id } = use(params);
   const marketId = decodeURIComponent(id);
-  const { state, handleMessage } = useOrderBook();
+  const { state, handleMessage, seedHistory } = useOrderBook();
   const { status, send } = useWebSocket(marketId, handleMessage);
   const { requestQuote } = useQuote(send);
   const [chartsVisible, setChartsVisible] = useState(false);
+  const historyFetched = useRef<string | null>(null);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     setChartsVisible(false);
     const timer = setTimeout(() => setChartsVisible(true), 140);
     return () => clearTimeout(timer);
   }, [marketId]);
 
+  // Venue history from actual Polymarket/Kalshi APIs
+  const [venueHistory, setVenueHistory] = useState<Record<string, Array<{ t: number; y: number }>>>({});
+
+  // Fetch price history on mount — both our internal store AND venue APIs
+  useEffect(() => {
+    if (historyFetched.current === marketId) return;
+    historyFetched.current = marketId;
+    const API_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:3001";
+
+    // Fetch our internal 24h history
+    fetch(`${API_URL}/api/markets/${encodeURIComponent(marketId)}/history?hours=24`)
+      .then((res) => res.ok ? res.json() as Promise<{ points: { t: number; y: number }[] }> : null)
+      .then((data) => {
+        if (!data?.points?.length) return;
+        const points: PricePoint[] = data.points.map((p) => ({
+          time: p.t,
+          yes: p.y,
+          no: 1 - p.y,
+        }));
+        seedHistory(points);
+      })
+      .catch(() => {});
+
+    // Fetch actual venue price history (Polymarket CLOB / Kalshi)
+    fetch(`${API_URL}/api/markets/${encodeURIComponent(marketId)}/venue-history?interval=all`)
+      .then((res) => res.ok ? res.json() as Promise<Record<string, Array<{ t: number; y: number }>>> : null)
+      .then((data) => {
+        if (!data) return;
+        setVenueHistory(data);
+        // Also seed combined history from Polymarket data if we have it (better than our 5-min snapshots)
+        const polyPoints = data.polymarket;
+        if (polyPoints && polyPoints.length > 0) {
+          seedHistory(polyPoints.map((p) => ({ time: p.t, yes: p.y, no: 1 - p.y })));
+        }
+      })
+      .catch(() => {});
+  }, [marketId, seedHistory]);
+
   const isLoading = !state.market;
+
+  // Detect if this is a crypto market → show Binance charts
+  const binanceSymbol = useMemo(
+    () => state.market?.question ? detectBinanceSymbol(state.market.question) : null,
+    [state.market?.question]
+  );
+  const { klines, ticks: binanceTicks, currentPrice, liveLineData } = useBinance(binanceSymbol);
 
   return (
     <main className="page-shell min-h-screen space-y-4">
@@ -110,6 +161,22 @@ export default function MarketPage({
           </div>
         </div>
       )}
+
+      {!isLoading && binanceSymbol ? (
+        <CryptoChartPanel
+          history={state.priceHistory}
+          book={state.aggregated}
+          venues={state.venues}
+          venueHistory={venueHistory}
+          symbol={binanceSymbol}
+          klines={klines}
+          ticks={binanceTicks}
+          currentPrice={currentPrice}
+          liveLineData={liveLineData}
+        />
+      ) : !isLoading ? (
+        <ProbabilityChart history={state.priceHistory} book={state.aggregated} venues={state.venues} venueHistory={venueHistory} />
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2 space-y-4">
@@ -126,14 +193,14 @@ export default function MarketPage({
                   chartsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                 }`}
               >
-                <DepthChart book={state.aggregated} animationKey={`depth-${marketId}`} />
+                <DepthChart book={state.aggregated} />
               </div>
               <div
                 className={`transition-all duration-900 delay-250 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
                   chartsVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
                 }`}
               >
-                <PriceChart history={state.priceHistory} animationKey={`price-${marketId}`} />
+                <PriceChart history={state.priceHistory} />
               </div>
             </>
           )}
@@ -146,6 +213,7 @@ export default function MarketPage({
             <QuotePanel
               onRequestQuote={requestQuote}
               quote={state.lastQuote}
+              book={state.aggregated}
             />
           )}
         </div>

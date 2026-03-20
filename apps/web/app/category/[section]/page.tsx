@@ -257,26 +257,25 @@ export default function CategoryPage({
 
   return (
     <main className="page-shell min-h-screen">
-      <div className="mb-12">
+      <div className="mb-6">
         <div className="page-header-block">
-          <Link href="/" className="text-xs text-text-muted hover:text-text-primary">
-            ← Back to All markets
+          <Link href="/" className="text-[13px] text-text-muted hover:text-text-primary transition-colors">
+            ← Back to all markets
           </Link>
-          <h1 className="page-title">All markets</h1>
-          <p className="page-subtitle">{SECTION_LABEL[category]} category</p>
+          <h1 className="page-title">{SECTION_LABEL[category]}</h1>
         </div>
 
-        <div className="controls-row mt-8 mb-0">
-          <div className="nav-depth-wrap flex w-fit rounded-xl p-1">
+        <div className="controls-row mt-5 mb-0">
+          <div className="nav-depth-wrap flex gap-1 w-fit rounded-xl p-1">
             {(["all", "polymarket", "kalshi"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => handleVenue(v)}
-                className={`nav-depth-pill w-[128px] text-[11px] font-bold uppercase tracking-wider ${
+                className={`nav-depth-pill w-20 text-[11px] font-bold uppercase tracking-wider ${
                   venue === v ? "nav-depth-pill-active" : ""
                 }`}
               >
-                {v === "all" ? "All" : v}
+                {v === "all" ? "All" : v === "polymarket" ? "Poly" : "Kalshi"}
               </button>
             ))}
           </div>
@@ -314,14 +313,14 @@ export default function CategoryPage({
           <button
             onClick={() => setOffset(Math.max(0, offset - limit))}
             disabled={offset === 0}
-            className="h-10 px-4 text-sm font-medium bg-surface-2 border border-border rounded-xl disabled:opacity-30 hover:bg-surface-hover transition-colors"
+            className="h-9 px-3.5 text-[13px] font-medium bg-surface-2 border border-border rounded-xl disabled:opacity-30 hover:bg-surface-hover transition-colors"
           >
             Previous
           </button>
           <button
             onClick={() => setOffset(offset + limit)}
             disabled={!hasMoreMarkets}
-            className="h-10 px-4 text-sm font-medium bg-surface-2 border border-border rounded-xl disabled:opacity-30 hover:bg-surface-hover transition-colors"
+            className="h-9 px-3.5 text-[13px] font-medium bg-surface-2 border border-border rounded-xl disabled:opacity-30 hover:bg-surface-hover transition-colors"
           >
             Next
           </button>

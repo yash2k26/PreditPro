@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AggregatedBook } from "@repo/shared-types";
 import {
   Area,
-  CartesianGrid,
-  ComposedChart,
-  Legend,
+  AreaChart,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -16,7 +14,6 @@ import {
 
 interface DepthChartProps {
   book: AggregatedBook | null;
-  animationKey?: string;
 }
 
 type DepthPoint = {
@@ -25,16 +22,35 @@ type DepthPoint = {
   askDepth: number;
 };
 
+const BID_COLOR = "#22c55e";
+const ASK_COLOR = "#ef4444";
+
 function formatCents(value: number): string {
-  return `${(value * 100).toFixed(0)}c`;
+  return `${(value * 100).toFixed(0)}¢`;
 }
 
-export function DepthChart({ book, animationKey = "default" }: DepthChartProps) {
-  const axisColor = "var(--color-text-muted)";
-  const tooltipBg = "var(--color-surface-2)";
-  const tooltipBorder = "var(--color-border)";
-  const tooltipText = "var(--color-text-primary)";
-  const refLineColor = "var(--color-border)";
+function formatDepth(value: number): string {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+  return value.toFixed(0);
+}
+
+export function DepthChart({ book }: DepthChartProps) {
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  // Only render chart when scrolled into view
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry?.isIntersecting) setInView(true); },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const data = useMemo(() => {
     if (!book || book.mid === null) return null;
@@ -53,7 +69,9 @@ export function DepthChart({ book, animationKey = "default" }: DepthChartProps) 
       askByPrice.set(level.price, askCum);
     }
 
-    const allPrices = [...new Set([...bidByPrice.keys(), ...askByPrice.keys()])].sort((a, b) => a - b);
+    const allPrices = [...new Set([...bidByPrice.keys(), ...askByPrice.keys()])].sort(
+      (a, b) => a - b
+    );
 
     const points: DepthPoint[] = allPrices.map((price) => ({
       price,
@@ -61,20 +79,25 @@ export function DepthChart({ book, animationKey = "default" }: DepthChartProps) 
       askDepth: askByPrice.get(price) ?? 0,
     }));
 
-    const maxDepth = Math.max(...points.map((p) => Math.max(p.bidDepth, p.askDepth)), 1);
-    return { points, maxDepth, mid: book.mid };
+    return { points, mid: book.mid };
   }, [book]);
-  const shouldAnimate = false;
+
+  useEffect(() => {
+    if (!hasAnimated && data && inView) {
+      const timer = setTimeout(() => setHasAnimated(true), 2100);
+      return () => clearTimeout(timer);
+    }
+  }, [hasAnimated, data, inView]);
 
   if (!data) {
     return (
-      <div className="depth-card rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-border">
+      <div ref={containerRef} className="depth-card rounded-xl overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-border">
           <h2 className="text-[13px] font-semibold uppercase tracking-wider text-text-muted">
             Depth Chart
           </h2>
         </div>
-        <div className="h-32 flex items-center justify-center text-xs text-text-muted">
+        <div className="h-32 flex items-center justify-center text-[13px] text-text-muted">
           No data for depth chart
         </div>
       </div>
@@ -82,71 +105,102 @@ export function DepthChart({ book, animationKey = "default" }: DepthChartProps) 
   }
 
   return (
-    <div className="depth-card rounded-xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-border">
+    <div ref={containerRef} className="depth-card rounded-xl overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
         <h2 className="text-[13px] font-semibold uppercase tracking-wider text-text-muted">
           Depth Chart
         </h2>
+        <div className="flex items-center gap-3 text-[11px] text-text-muted">
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> Bid
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-rose-500" /> Ask
+          </span>
+        </div>
       </div>
 
-      <div className="h-40 px-2 py-2">
+      <div className="h-48 px-1 py-2">
+        {inView ? (
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart key={animationKey} data={data.points} margin={{ top: 8, right: 12, bottom: 8, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+          <AreaChart data={data.points} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+            <defs>
+              <linearGradient id="bidFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={BID_COLOR} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={BID_COLOR} stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="askFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={ASK_COLOR} stopOpacity={0.25} />
+                <stop offset="100%" stopColor={ASK_COLOR} stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
             <XAxis
               dataKey="price"
               type="number"
               domain={["dataMin", "dataMax"]}
               tickFormatter={formatCents}
-              tick={{ fill: axisColor, fontSize: 10 }}
+              tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
               tickLine={false}
               axisLine={false}
+              minTickGap={50}
             />
             <YAxis
-              width={40}
-              tick={{ fill: axisColor, fontSize: 10 }}
+              tickFormatter={formatDepth}
+              tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
               tickLine={false}
               axisLine={false}
+              width={42}
             />
             <Tooltip
-              labelFormatter={(value: number) => `Price ${formatCents(value)}`}
-              formatter={(value: number, name: string) => [Number(value).toFixed(2), name === "bidDepth" ? "Bid depth" : "Ask depth"]}
+              labelFormatter={(value: number) => `Price: ${formatCents(value)}`}
+              formatter={(value: number, name: string) => [
+                formatDepth(Number(value)),
+                name === "bidDepth" ? "Bid depth" : "Ask depth",
+              ]}
               contentStyle={{
-                background: tooltipBg,
-                border: `1px solid ${tooltipBorder}`,
+                background: "var(--color-surface-2)",
+                border: "1px solid var(--color-border)",
                 borderRadius: 10,
-                color: tooltipText,
+                color: "var(--color-text-primary)",
+                fontSize: 12,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
               }}
-            />
-            <Legend
-              verticalAlign="top"
-              height={24}
-              wrapperStyle={{ fontSize: 10, color: axisColor }}
             />
             <ReferenceLine
               x={data.mid}
-              stroke={refLineColor}
+              stroke="var(--color-text-muted)"
               strokeDasharray="4 4"
-              label={{ value: "Mid", fill: axisColor, fontSize: 10, position: "insideTopRight" }}
+              strokeOpacity={0.5}
             />
             <Area
               type="stepAfter"
               dataKey="bidDepth"
-              name="Bid"
-              stroke="#22c55e"
-              fill="rgba(34, 197, 94, 0.18)"
-              isAnimationActive={shouldAnimate}
+              stroke={BID_COLOR}
+              strokeWidth={1.5}
+              fill="url(#bidFill)"
+              fillOpacity={1}
+              isAnimationActive={!hasAnimated}
+              animationDuration={2000}
+              animationEasing="ease-out"
+              dot={false}
             />
             <Area
               type="stepAfter"
               dataKey="askDepth"
-              name="Ask"
-              stroke="#ef4444"
-              fill="rgba(239, 68, 68, 0.18)"
-              isAnimationActive={shouldAnimate}
+              stroke={ASK_COLOR}
+              strokeWidth={1.5}
+              fill="url(#askFill)"
+              fillOpacity={1}
+              isAnimationActive={!hasAnimated}
+              animationDuration={2000}
+              animationEasing="ease-out"
+              dot={false}
             />
-          </ComposedChart>
+          </AreaChart>
         </ResponsiveContainer>
+        ) : (
+          <div className="h-full" />
+        )}
       </div>
     </div>
   );

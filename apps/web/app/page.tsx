@@ -6,13 +6,17 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { ExploreMarket, MarketsResponse, ServerMessage } from "@repo/shared-types";
 import { useWebSocket } from "../hooks/useWebSocket";
-import {
-  detectSection,
-  SECTION_LABEL,
-  SECTION_ORDER,
-  type SectionKey,
-} from "../lib/market-sections";
+import { SECTION_LABEL } from "../lib/market-sections";
 import { SortDropdown } from "../components/layout/SortDropdown";
+import { motion } from "motion/react"
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 const API_URL = process.env["NEXT_PUBLIC_API_URL"] ?? "http://localhost:3001";
 
@@ -38,25 +42,6 @@ function formatPct(value: number | null): string {
   return `${Math.round(value * 100)}%`;
 }
 
-function projectionPath(
-  points: number[],
-  width: number,
-  height: number,
-  pad = 8,
-  rangeMin = 0,
-  rangeMax = 100,
-): string {
-  if (points.length === 0) return "";
-  const span = rangeMax - rangeMin || 1;
-  const step = (width - pad * 2) / Math.max(1, points.length - 1);
-  return points
-    .map((p, i) => {
-      const x = pad + i * step;
-      const y = height - pad - ((p - rangeMin) / span) * (height - pad * 2);
-      return `${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
-}
 
 function MarketAvatar({ market }: { market: ExploreMarket }) {
   const imageUrl = market.imageUrl ?? market.venues.find((v) => v.imageUrl)?.imageUrl ?? null;
@@ -82,11 +67,10 @@ function MarketAvatar({ market }: { market: ExploreMarket }) {
 function VenueBadge({ venue }: { venue: "polymarket" | "kalshi" }) {
   return (
     <span
-      className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded ${
-        venue === "polymarket"
+      className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded ${venue === "polymarket"
           ? "bg-slate-600/30 text-slate-200 border border-slate-500/30"
           : "bg-zinc-700/35 text-zinc-200 border border-zinc-500/30"
-      }`}
+        }`}
     >
       {venue === "polymarket" ? "Poly" : "Kalshi"}
     </span>
@@ -111,25 +95,23 @@ function OutcomeRow({
       ? "text-rose-400"
       : "text-text-primary";
 
-  const bgClass = isYes
-    ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-300"
+  const btnClass = isYes
+    ? "bg-emerald-500/15 border-emerald-500/25 text-emerald-500 hover:bg-emerald-500/25 hover:border-emerald-500/40"
     : isNo
-      ? "bg-rose-500/10 border-rose-500/20 text-rose-300"
-      : "bg-surface-3 border-border text-text-secondary";
+      ? "bg-rose-500/15 border-rose-500/25 text-rose-500 hover:bg-rose-500/25 hover:border-rose-500/40"
+      : "bg-surface-3 border-border text-text-secondary hover:bg-surface-hover";
 
   return (
     <div className="flex items-center justify-between py-2 group/row transition-colors duration-200">
       <div className="flex items-center gap-3">
         <div className={`w-1.5 h-1.5 rounded-full ${isYes ? "bg-emerald-500" : isNo ? "bg-rose-500" : "bg-text-muted"}`} />
-        <span className="text-base text-text-secondary font-medium truncate max-w-[140px]">{label}</span>
+        <span className="text-[13px] text-text-secondary font-medium truncate max-w-[140px]">{label}</span>
       </div>
       <div className="flex items-center gap-4">
-        <span className={`text-xl leading-none font-bold tabular-nums ${colorClass}`}>{pctText}</span>
-        <div className="flex gap-1.5">
-          <button className={`px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg border transition-all duration-200 active:scale-95 ${bgClass} hover:brightness-125`}>
-            Bet
-          </button>
-        </div>
+        <span className={`text-lg leading-none font-bold tabular-nums ${colorClass}`}>{pctText}</span>
+        <button className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border transition-all duration-200 active:scale-95 ${btnClass}`}>
+          {isYes ? "Buy Yes" : isNo ? "Buy No" : "Bet"}
+        </button>
       </div>
     </div>
   );
@@ -282,7 +264,7 @@ function TrendingCarousel({
       </div>
 
       <div className="relative overflow-hidden">
-        <div 
+        <div
           className="flex transition-transform duration-700 ease-[cubic-bezier(0.23,1,0.32,1)]"
           style={{ transform: `translateX(-${activeIndex * 100}%)` }}
         >
@@ -303,30 +285,14 @@ function TrendingCarousel({
             const noSeries = history.length >= 2
               ? history.map(p => Math.round((1 - p.yes) * 100))
               : Array(2).fill(Math.round((noValue ?? 0.5) * 100));
-            const chartWidth = 680;
-            const chartHeight = 320;
-            const strokeColors = [
-              "rgba(52,211,153,0.95)",
-              "rgba(251,113,133,0.95)",
-            ];
-            // Auto-scale Y-axis to the data range so small movements are visible
+            // Auto-scale Y-axis for recharts domain
             const allValues = [...yesSeries, ...noSeries];
             const dataMin = Math.min(...allValues);
             const dataMax = Math.max(...allValues);
             const range = dataMax - dataMin;
-            // Add 20% padding, minimum 10% range so flat lines still look good
             const padding = Math.max(range * 0.2, 5);
             const yMin = Math.max(0, Math.floor((dataMin - padding) / 5) * 5);
             const yMax = Math.min(100, Math.ceil((dataMax + padding) / 5) * 5);
-            const yRange = yMax - yMin || 10;
-            // Build tick marks for the visible range
-            const tickStep = yRange <= 20 ? 5 : yRange <= 50 ? 10 : 20;
-            const axisSteps: number[] = [];
-            for (let t = yMin; t <= yMax; t += tickStep) axisSteps.push(t);
-            const yAt = (v: number) => {
-              const pad = 10;
-              return chartHeight - pad - ((v - yMin) / yRange) * (chartHeight - pad * 2);
-            };
 
             return (
               <div key={market.id} className="min-w-full">
@@ -393,57 +359,33 @@ function TrendingCarousel({
                     </div>
                   </div>
 
-                  {/* Main content: outcomes left | chart right */}
-                  <div className="grid grid-cols-1 lg:grid-cols-[0.34fr_0.66fr] gap-5 items-start">
-                    <div className="min-w-0 space-y-3">
-                      {/* Outcome rows */}
-                      <div className="rounded-xl border border-border/60 bg-surface-2/40">
-                        {[
-                          { pct: formatPct(currentYes), label: yesLabel, color: "text-emerald-400" },
-                          { pct: formatPct(currentNo), label: noLabel, color: "text-rose-400" },
-                        ].map((item, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between px-4 py-3 border-b border-border/50 last:border-b-0"
-                          >
-                            <span key={item.pct} className="live-value text-3xl font-black text-text-primary tabular-nums">
-                              {item.pct}
-                            </span>
-                            <span className={`text-base font-semibold ${item.color}`}>
-                              {item.label}
-                            </span>
-                          </div>
-                        ))}
+                  {/* Outcomes + Chart */}
+                  <div className="grid grid-cols-1 lg:grid-cols-[0.3fr_0.7fr] gap-5 items-stretch">
+                    {/* Left: outcomes once, clean */}
+                    <div className="min-w-0 flex flex-col gap-3">
+                      <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 flex flex-col justify-center">
+                        <div className="text-[10px] uppercase tracking-wider font-semibold text-emerald-400/70 mb-1">{yesLabel}</div>
+                        <div key={`y-${formatPct(currentYes)}`} className="live-value text-3xl font-black text-emerald-400 tabular-nums">{formatPct(currentYes)}</div>
                       </div>
-
-                      {/* Quick bet boxes */}
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2.5">
-                          <div className="text-[9px] uppercase tracking-wider font-semibold text-emerald-300/70">{yesLabel}</div>
-                          <div key={`yes-${formatPct(currentYes)}`} className="live-value mt-0.5 text-2xl font-black text-emerald-400 tabular-nums">{formatPct(currentYes)}</div>
-                        </div>
-                        <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2.5">
-                          <div className="text-[9px] uppercase tracking-wider font-semibold text-rose-300/70">{noLabel}</div>
-                          <div key={`no-${formatPct(currentNo)}`} className="live-value mt-0.5 text-2xl font-black text-rose-400 tabular-nums">{formatPct(currentNo)}</div>
-                        </div>
+                      <div className="flex-1 rounded-xl border border-rose-500/20 bg-rose-500/8 px-4 py-3 flex flex-col justify-center">
+                        <div className="text-[10px] uppercase tracking-wider font-semibold text-rose-400/70 mb-1">{noLabel}</div>
+                        <div key={`n-${formatPct(currentNo)}`} className="live-value text-3xl font-black text-rose-400 tabular-nums">{formatPct(currentNo)}</div>
                       </div>
-
-                      {/* Volume / Liquidity */}
-                      <div className="flex items-center gap-6 pt-2">
+                      <div className="flex items-center gap-5 px-1 pt-1">
                         <div>
                           <div className="text-[9px] font-bold uppercase tracking-widest text-text-muted mb-0.5">Vol 24H</div>
-                          <div className="text-base font-bold text-text-primary">{formatNum(market.volume24h)}</div>
+                          <div className="text-sm font-bold text-text-primary">{formatNum(market.volume24h)}</div>
                         </div>
                         <div>
                           <div className="text-[9px] font-bold uppercase tracking-widest text-text-muted mb-0.5">Liquidity</div>
-                          <div className="text-base font-bold text-text-primary">{formatNum(market.liquidity)}</div>
+                          <div className="text-sm font-bold text-text-primary">{formatNum(market.liquidity)}</div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Chart */}
-                    <div className="depth-card rounded-xl p-4">
-                      <div className="mb-3 flex items-center justify-between gap-3">
+                    {/* Right: recharts live chart */}
+                    <div className="depth-card rounded-xl p-4 flex flex-col">
+                      <div className="mb-2 flex items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
                             <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -459,51 +401,50 @@ function TrendingCarousel({
                           LIVE
                         </span>
                       </div>
-                      <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full h-64">
-                        {axisSteps.map((tick) => (
-                          <g key={`${market.id}-tick-${tick}`}>
-                            <line
-                              x1="10"
-                              y1={yAt(tick)}
-                              x2={chartWidth - 54}
-                              y2={yAt(tick)}
-                              stroke="rgba(148,163,148,0.22)"
-                              strokeDasharray="2 8"
-                            />
-                            <text
-                              x={chartWidth - 46}
-                              y={yAt(tick) + 5}
-                              fill="rgba(148,163,148,0.85)"
-                              fontSize="11"
-                              fontWeight="500"
-                            >
-                              {tick}%
-                            </text>
-                          </g>
-                        ))}
-                        <path d={projectionPath(yesSeries, chartWidth - 54, chartHeight, 8, yMin, yMax)} fill="none" stroke={strokeColors[0]} strokeWidth="2.5" strokeLinejoin="round" />
-                        <path d={projectionPath(noSeries, chartWidth - 54, chartHeight, 8, yMin, yMax)} fill="none" stroke={strokeColors[1]} strokeWidth="2.5" strokeLinejoin="round" />
-                        <circle cx={chartWidth - 62} cy={yAt(yesSeries[yesSeries.length - 1] ?? 50)} r="4" fill={strokeColors[0]}>
-                          <animate attributeName="r" values="3.5;5.5;3.5" dur="1.5s" repeatCount="indefinite" />
-                        </circle>
-                        <circle cx={chartWidth - 62} cy={yAt(noSeries[noSeries.length - 1] ?? 50)} r="4" fill={strokeColors[1]}>
-                          <animate attributeName="r" values="3.5;5.5;3.5" dur="1.5s" repeatCount="indefinite" />
-                        </circle>
-                      </svg>
-                      <div className="mt-1 flex items-center justify-between text-[10px] text-text-muted">
+                      <div className="flex-1 min-h-56">
                         {history.length >= 2 ? (
-                          <>
-                            {[0, Math.floor(history.length / 3), Math.floor(2 * history.length / 3), history.length - 1].map((idx) => {
-                              const d = new Date(history[idx]!.time);
-                              const spanHours = (history[history.length - 1]!.time - history[0]!.time) / 3600000;
-                              const label = spanHours > 6
-                                ? d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                                : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-                              return <span key={idx}>{label}</span>;
-                            })}
-                          </>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                              data={history.map(p => ({ time: p.time, yes: p.yes * 100, no: (1 - p.yes) * 100 }))}
+                              margin={{ top: 6, right: 10, bottom: 4, left: 0 }}
+                            >
+                              <XAxis
+                                dataKey="time"
+                                type="number"
+                                domain={["dataMin", "dataMax"]}
+                                tickFormatter={(ts: number) => {
+                                  const d = new Date(ts);
+                                  const spanH = history.length >= 2 ? (history[history.length - 1]!.time - history[0]!.time) / 3600000 : 0;
+                                  return spanH > 6
+                                    ? d.toLocaleDateString([], { month: "short", day: "numeric" })
+                                    : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                                }}
+                                tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
+                                axisLine={false}
+                                tickLine={false}
+                                minTickGap={60}
+                              />
+                              <YAxis
+                                domain={[yMin, yMax]}
+                                tickFormatter={(v: number) => `${v}%`}
+                                tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
+                                axisLine={false}
+                                tickLine={false}
+                                width={36}
+                              />
+                              <Tooltip
+                                labelFormatter={(ts: number) => new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                formatter={(value: number, name: string) => [`${value.toFixed(1)}%`, name === "yes" ? yesLabel : noLabel]}
+                                contentStyle={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: 10, color: "var(--color-text-primary)", fontSize: 12 }}
+                              />
+                              <Line type="stepAfter" dataKey="yes" stroke="#22c55e" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={{ r: 3.5, fill: "#22c55e", stroke: "var(--color-surface-2)", strokeWidth: 2 }} />
+                              <Line type="stepAfter" dataKey="no" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={{ r: 3.5, fill: "#ef4444", stroke: "var(--color-surface-2)", strokeWidth: 2 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
                         ) : (
-                          <span>Loading price history...</span>
+                          <div className="h-full flex items-center justify-center text-[13px] text-text-muted">
+                            Collecting live data...
+                          </div>
                         )}
                       </div>
                     </div>
@@ -530,18 +471,22 @@ function TrendingCarousel({
 }
 
 function ExploreContent() {
-  const PREVIEW_MARKETS_PER_CATEGORY = 15;
   const router = useRouter();
   const searchParams = useSearchParams();
   const search = searchParams?.get("q") || "";
   const venue = (searchParams?.get("venue") as VenueFilter) || "all";
 
   const [data, setData] = useState<MarketsResponse | null>(null);
+  const [trendingData, setTrendingData] = useState<ExploreMarket[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sort, setSort] = useState<SortOption>("volume");
   const [offset, setOffset] = useState(0);
   const [trendingIndex, setTrendingIndex] = useState(0);
+
+  // Animated filter pill states
+  const [hoverActive, setHoverActive] = useState<VenueFilter>(venue);
+  const [clickActive, setClickActive] = useState<VenueFilter>(venue);
   const limit = 180;
 
   // --- Live chart WebSocket ---
@@ -551,36 +496,15 @@ function ExploreContent() {
   const [liveHistory, setLiveHistory] = useState<Record<string, { time: number; yes: number }[]>>({});
 
   const trendingMarkets = useMemo(() => {
-    if (!data?.markets?.length) return [];
-    return [...data.markets]
+    if (!trendingData?.length) return [];
+    return [...trendingData]
       .sort((a, b) => {
         if (b.volume24h !== a.volume24h) return b.volume24h - a.volume24h;
         return b.liquidity - a.liquidity;
       })
       .slice(0, 5);
-  }, [data?.markets]);
+  }, [trendingData]);
 
-  const sectionedMarkets = useMemo(() => {
-    const grouped: Record<SectionKey, ExploreMarket[]> = {
-      trending: [],
-      sports: [],
-      crypto: [],
-      politics: [],
-      economy: [],
-      tech: [],
-      world: [],
-      culture: [],
-      other: [],
-    };
-
-    if (!data?.markets?.length) return grouped;
-    for (const market of data.markets) {
-      grouped[detectSection(market)].push(market);
-    }
-    return grouped;
-  }, [data?.markets]);
-
-  const visibleSections = useMemo(() => SECTION_ORDER, []);
   const hasMoreMarkets = (data?.markets.length ?? 0) < (data?.total ?? 0);
 
   const handleVenue = (nextVenue: VenueFilter) => {
@@ -613,6 +537,15 @@ function ExploreContent() {
     }
   }, [search, sort, venue, offset]);
 
+  // Fetch unfiltered trending data once on mount
+  useEffect(() => {
+    if (trendingData) return;
+    fetch(`${API_URL}/api/markets?limit=50&offset=0&sort=volume`)
+      .then((res) => res.ok ? res.json() as Promise<MarketsResponse> : null)
+      .then((json) => { if (json) setTrendingData(json.markets); })
+      .catch(() => { });
+  }, [trendingData]);
+
   useEffect(() => {
     setLoading(true);
     const timer = setTimeout(fetchMarkets, search ? 300 : 0);
@@ -632,11 +565,11 @@ function ExploreContent() {
     if (trendingMarkets.length < 2) return;
     const timer = setInterval(() => {
       setTrendingIndex((prev) => (prev + 1) % trendingMarkets.length);
-    }, 4500);
+    }, 8000);
     return () => clearInterval(timer);
   }, [trendingMarkets.length]);
 
-  // Fetch 24h price history for all trending markets on mount
+  // Fetch venue price history (Polymarket CLOB / Kalshi) for all trending markets
   const historyFetchedRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (trendingMarkets.length === 0) return;
@@ -650,12 +583,15 @@ function ExploreContent() {
 
       const results = await Promise.allSettled(
         toFetch.map(async (m) => {
+          // Fetch real venue history (weeks/months of data from Polymarket/Kalshi APIs)
           const res = await fetch(
-            `${API_URL}/api/markets/${encodeURIComponent(m.id)}/history?hours=24`
+            `${API_URL}/api/markets/${encodeURIComponent(m.id)}/venue-history?interval=all`
           );
           if (!res.ok) return { id: m.id, points: [] as { t: number; y: number }[] };
-          const json = (await res.json()) as { points: { t: number; y: number }[] };
-          return { id: m.id, points: json.points };
+          const json = (await res.json()) as Record<string, Array<{ t: number; y: number }>>;
+          // Use Polymarket data if available, otherwise Kalshi
+          const points = json.polymarket?.length ? json.polymarket : json.kalshi ?? [];
+          return { id: m.id, points };
         })
       );
 
@@ -666,13 +602,11 @@ function ExploreContent() {
         const { id, points } = result.value;
         if (points.length === 0) continue;
         historyFetchedRef.current.add(id);
-        // Prepend historical data before any live data already collected
         const existing = liveHistoryRef.current[id] ?? [];
         const historical = points.map((p) => ({ time: p.t, yes: p.y }));
-        liveHistoryRef.current[id] = [...historical, ...existing].slice(-600);
+        liveHistoryRef.current[id] = [...historical, ...existing].slice(-2000);
       }
 
-      // Trigger a render with the new data
       setLiveHistory({ ...liveHistoryRef.current });
     };
 
@@ -695,7 +629,7 @@ function ExploreContent() {
     const id = activeMarketIdRef.current;
     if (!id) return;
     const existing = liveHistoryRef.current[id] ?? [];
-    liveHistoryRef.current[id] = [...existing.slice(-599), { time: Date.now(), yes: bid }];
+    liveHistoryRef.current[id] = [...existing.slice(-1999), { time: Date.now(), yes: bid }];
   }, []);
 
   // Connect to the currently visible trending market
@@ -727,7 +661,7 @@ function ExploreContent() {
                 <h3 className="section-title">{SECTION_LABEL.trending}</h3>
                 <span className="section-meta">0 markets</span>
               </div>
-                <div className="depth-card rounded-xl p-4 text-sm text-text-muted">
+              <div className="depth-card rounded-xl p-4 text-sm text-text-muted">
                 No trending markets in the current filter.
               </div>
             </section>
@@ -750,17 +684,43 @@ function ExploreContent() {
 
       {/* Filters */}
       <div className="controls-row">
-        <div className="nav-depth-wrap flex gap-2 w-fit p-1">
-          {(["all", "polymarket", "kalshi"] as const).map((v) => (
-            <button
+        <div className="nav-depth-wrap flex gap-1 w-fit rounded-xl p-1">
+          {(["all", "polymarket", "kalshi"] as const).map((v, idx) => (
+            <motion.button
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 + idx * 0.05, duration: 0.3 }}
+              onMouseEnter={() => setHoverActive(v)}
+              onMouseLeave={() => setHoverActive(clickActive)}
+              onClick={() => { setClickActive(v); handleVenue(v); }}
               key={v}
-              onClick={() => handleVenue(v)}
-              className={`nav-depth-pill w-22.5 text-[11px] font-bold uppercase tracking-wider ${
-                venue === v ? "nav-depth-pill-active" : ""
-              }`}
+              className="nav-depth-pill relative w-22.5 text-[11px] font-bold uppercase tracking-wider"
             >
-              {v === "all" ? "All" : v}
-            </button>
+              {hoverActive === v && hoverActive != clickActive && (
+                <motion.div
+                  layoutId="venue-hover"
+                  className="absolute inset-0 rounded-[10px] bg-surface-hover/60 border border-border/40"
+                  transition={{
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 35,
+                  }}
+                />
+              )}
+              {clickActive === v && (
+                <motion.div
+                  layoutId="venue-active"
+                  className="absolute inset-0 rounded-[10px] nav-depth-pill-active"
+                  style={{ inset: 0 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 30,
+                  }}
+                />
+              )}
+              <span className="relative z-10">{v === "all" ? "All" : v}</span>
+            </motion.button>
           ))}
         </div>
 
@@ -787,57 +747,23 @@ function ExploreContent() {
         </div>
       )}
 
-      {/* Market grid */}
+      {/* Market grid — flat, no category sections */}
       {data && (
         <>
-          {visibleSections
-            .filter((s) => s !== "trending")
-            .map((section) => {
-              const marketsInSection = sectionedMarkets[section] ?? [];
-              const previewMarkets = marketsInSection.slice(0, PREVIEW_MARKETS_PER_CATEGORY);
-              return (
-                <section
-                  key={section}
-                  id={section}
-                  className="mb-8 scroll-mt-24"
-                >
-                  <div className="mb-3 flex items-end justify-between gap-4">
-                    <h3 className="section-title">{SECTION_LABEL[section]}</h3>
-                    <span className="section-meta">{marketsInSection.length} markets</span>
-                  </div>
-                  {previewMarkets.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                      {previewMarkets.map((market) => (
-                        <MarketCard key={market.id} market={market} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="depth-card rounded-xl p-4 text-sm text-text-muted">
-                      No markets in this section right now.
-                    </div>
-                  )}
-                  {marketsInSection.length >= PREVIEW_MARKETS_PER_CATEGORY && (
-                    <div className="mt-4 flex justify-center">
-                      <Link
-                        href={`/category/${section}`}
-                        className="px-5 py-2 text-xs font-semibold uppercase tracking-wide rounded-xl border border-border bg-surface-2 hover:bg-surface-hover transition-colors"
-                      >
-                        View more markets
-                      </Link>
-                    </div>
-                  )}
-                </section>
-              );
-            })}
-
-          {data.markets.length === 0 && (
+          {data.markets.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {data.markets.map((market) => (
+                <MarketCard key={market.id} market={market} />
+              ))}
+            </div>
+          ) : (
             <div className="text-center py-20 text-text-muted">
               No markets found
             </div>
           )}
 
-          <div className="mt-10 flex items-center justify-between gap-4">
-            <span className="text-sm text-text-muted">
+          <div className="mt-8 flex items-center justify-between gap-4">
+            <span className="text-[13px] text-text-muted">
               Showing {offset + 1}-{Math.min(offset + limit, data.total)} of {data.total.toLocaleString()}
             </span>
             <div className="flex gap-2">
