@@ -4,15 +4,21 @@ services:
       context: ..
       dockerfile: docker/backend/Dockerfile
     ports:
-      - "1001:3001"
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - CORS_ORIGIN=https://predictpro.yashb.xyz
     restart: unless-stopped
 
   web:
     build:
       context: ..
       dockerfile: docker/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://api.predictpro.yashb.xyz
+        NEXT_PUBLIC_WS_URL: wss://api.predictpro.yashb.xyz
     ports:
-      - "1000:3000"
+      - "3000:3000"
     depends_on:
       - server
     restart: unless-stopped

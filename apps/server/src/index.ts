@@ -9,7 +9,9 @@ import { fetchPolymarketHistory, fetchKalshiHistory } from "./markets/venue-hist
 
 async function main(): Promise<void> {
   const app = express();
-  app.use(cors());
+  app.use(cors({
+    origin: process.env["CORS_ORIGIN"] || true,
+  }));
   app.use(express.json());
 
   app.get("/health", (_req, res) => {
