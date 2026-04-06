@@ -79,6 +79,9 @@ jobs:
           context: .
           file: docker/web/Dockerfile
           push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.predictpro.yashb.xyz
+            NEXT_PUBLIC_WS_URL=wss://api.predictpro.yashb.xyz
           tags: |
             ${{ env.IMAGE_PREFIX }}/web:${{ github.sha }}
             ${{ env.IMAGE_PREFIX }}/web:latest
