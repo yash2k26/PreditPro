@@ -19,9 +19,6 @@ export interface BinanceTick {
   price: number;
 }
 
-/**
- * Detect which Binance symbol a market question refers to.
- */
 export function detectBinanceSymbol(question: string): string | null {
   const q = ` ${question.toLowerCase()} `;
   const symbols: [string[], string][] = [
@@ -37,9 +34,6 @@ export function detectBinanceSymbol(question: string): string | null {
   return null;
 }
 
-/**
- * Fetch historical klines from Binance REST API.
- */
 export async function fetchKlines(
   symbol: string,
   interval = "5m",
@@ -65,30 +59,28 @@ export async function fetchKlines(
   }
 }
 
-/**
- * Hook: live Binance price via WebSocket + historical klines.
- */
 export function useBinance(symbol: string | null) {
   const [klines, setKlines] = useState<Kline[]>([]);
   const [ticks, setTicks] = useState<BinanceTick[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-  const ticksRef = useRef<BinanceTick[]>([]);
 
-  // Fetch klines on mount
+  // Mutable refs — never trigger renders directly
+  const ticksRef = useRef<BinanceTick[]>([]);
+  const currentPriceRef = useRef<number | null>(null);
+  const prevTicksLenRef = useRef(0);
+
   useEffect(() => {
     if (!symbol) return;
-    console.log(`[binance] Fetching klines for ${symbol}...`);
     fetchKlines(symbol, "5m", 200).then((data) => {
-      console.log(`[binance] Got ${data.length} klines`);
       if (data.length > 0) {
         setKlines(data);
-        setCurrentPrice(data[data.length - 1]!.close);
+        const last = data[data.length - 1]!.close;
+        setCurrentPrice(last);
+        currentPriceRef.current = last;
       }
     });
   }, [symbol]);
 
-  // WebSocket for live trades
   useEffect(() => {
     if (!symbol) return;
 
@@ -100,44 +92,41 @@ export function useBinance(symbol: string | null) {
     const connect = () => {
       if (closed) return;
       ws = new WebSocket(`${BINANCE_WS}/${symbol.toLowerCase()}@aggTrade`);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        console.log(`[binance] Connected to ${symbol}`);
-      };
 
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data as string) as { p: string; T: number };
           const price = parseFloat(data.p);
           const time = data.T;
-          setCurrentPrice(price);
+
+          // Store in ref — never call setState here (too frequent)
+          currentPriceRef.current = price;
 
           const arr = ticksRef.current;
-          // Throttle: only store if >300ms since last tick
           if (arr.length === 0 || time - arr[arr.length - 1]!.time > 300) {
             arr.push({ time, price });
             if (arr.length > 1000) arr.splice(0, arr.length - 1000);
           }
-        } catch { /* ignore parse errors */ }
+        } catch { /* ignore */ }
       };
 
       ws.onclose = () => {
-        if (!closed) {
-          reconnectTimer = setTimeout(connect, 2000);
-        }
+        if (!closed) reconnectTimer = setTimeout(connect, 2000);
       };
 
-      ws.onerror = () => {
-        ws.close();
-      };
+      ws.onerror = () => ws.close();
     };
 
     connect();
 
-    // Sync ticks ref → state every 500ms
+    // Single sync interval: flush ticks + currentPrice to state at 500ms
     syncTimer = setInterval(() => {
-      if (ticksRef.current.length > 0) {
+      const cp = currentPriceRef.current;
+      const len = ticksRef.current.length;
+      // Only update state if data actually changed
+      if (cp !== null) setCurrentPrice(cp);
+      if (len !== prevTicksLenRef.current) {
+        prevTicksLenRef.current = len;
         setTicks([...ticksRef.current]);
       }
     }, 500);
@@ -146,20 +135,18 @@ export function useBinance(symbol: string | null) {
       closed = true;
       clearInterval(syncTimer);
       clearTimeout(reconnectTimer);
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
+      ws?.close();
     };
   }, [symbol]);
 
-  // Combined live line: kline closes (history) + live ticks (recent)
+  // Combined live line: kline closes + live ticks after last kline
   const liveLineData = useMemo(() => {
     const points: BinanceTick[] = klines.map((k) => ({ time: k.time, price: k.close }));
-    // Dedupe: only add ticks that are after the last kline
     const lastKlineTime = klines.length > 0 ? klines[klines.length - 1]!.time : 0;
-    const recentTicks = ticks.filter((t) => t.time > lastKlineTime);
-    return [...points, ...recentTicks];
+    for (const t of ticks) {
+      if (t.time > lastKlineTime) points.push(t);
+    }
+    return points;
   }, [klines, ticks]);
 
   return { klines, ticks, currentPrice, liveLineData };

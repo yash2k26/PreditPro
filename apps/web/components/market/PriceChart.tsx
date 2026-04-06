@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { PricePoint } from "../../hooks/useOrderBook";
 import {
   Area,
@@ -29,7 +29,7 @@ function formatElapsed(ms: number): string {
   return `Last ${(s / 3600).toFixed(1)}h`;
 }
 
-export function PriceChart({ history }: PriceChartProps) {
+export const PriceChart = memo(function PriceChart({ history }: PriceChartProps) {
   const [hasAnimated, setHasAnimated] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,9 +71,14 @@ export function PriceChart({ history }: PriceChartProps) {
   // Auto-scale Y domain
   const yDomain = useMemo(() => {
     if (chartData.length === 0) return [0, 1];
-    const allVals = chartData.flatMap((d) => [d.yes, d.no]);
-    const min = Math.min(...allVals);
-    const max = Math.max(...allVals);
+    let min = Infinity;
+    let max = -Infinity;
+    for (const d of chartData) {
+      if (d.yes < min) min = d.yes;
+      if (d.yes > max) max = d.yes;
+      if (d.no < min) min = d.no;
+      if (d.no > max) max = d.no;
+    }
     const range = max - min;
     const pad = Math.max(range * 0.15, 0.03);
     return [Math.max(0, min - pad), Math.min(1, max + pad)];
@@ -217,4 +222,4 @@ export function PriceChart({ history }: PriceChartProps) {
       </div>
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import type { VenueHealthInfo } from "@repo/shared-types";
 
 interface VenueStatusProps {
@@ -7,14 +8,14 @@ interface VenueStatusProps {
   wsStatus: string;
 }
 
-export function VenueStatus({ health, wsStatus }: VenueStatusProps) {
+export const VenueStatus = memo(function VenueStatus({ health, wsStatus }: VenueStatusProps) {
   const venues = [
     { id: "polymarket", label: "Polymarket", color: "bg-polymarket", note: null },
     { id: "kalshi", label: "Kalshi", color: "bg-kalshi", note: "Top-of-book only" },
   ];
 
   return (
-    <div className="flex items-center gap-4 text-xs">
+    <div className="flex flex-wrap items-center gap-3 text-xs">
       <div className="flex items-center gap-1.5">
         <div
           className={`w-2 h-2 rounded-full ${
@@ -65,4 +66,4 @@ export function VenueStatus({ health, wsStatus }: VenueStatusProps) {
       })}
     </div>
   );
-}
+});

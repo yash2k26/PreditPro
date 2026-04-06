@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
+import { memo } from "react";
 import type { AggregatedBook, MarketInfo } from "@repo/shared-types";
 import { formatPrice, formatSpread } from "../../lib/format";
 
@@ -29,12 +30,12 @@ function MarketAvatar({ market }: { market: MarketInfo }) {
   );
 }
 
-export function MarketHeader({ market, book }: MarketHeaderProps) {
+export const MarketHeader = memo(function MarketHeader({ market, book }: MarketHeaderProps) {
   return (
     <div className="flex items-start gap-3.5">
       {market && <MarketAvatar market={market} />}
       <div className="space-y-2 min-w-0 flex-1">
-        <h1 className="text-base font-bold text-text-primary leading-snug">
+        <h1 className="text-sm sm:text-base font-bold text-text-primary leading-snug">
           {market?.question ?? "Loading market..."}
         </h1>
 
@@ -75,4 +76,4 @@ export function MarketHeader({ market, book }: MarketHeaderProps) {
       </div>
     </div>
   );
-}
+});

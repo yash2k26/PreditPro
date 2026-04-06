@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { AggregatedBook } from "@repo/shared-types";
 import {
   Area,
@@ -34,7 +34,7 @@ function formatDepth(value: number): string {
   return value.toFixed(0);
 }
 
-export function DepthChart({ book }: DepthChartProps) {
+export const DepthChart = memo(function DepthChart({ book }: DepthChartProps) {
   const [hasAnimated, setHasAnimated] = useState(false);
 
   // Only render chart when scrolled into view
@@ -204,4 +204,4 @@ export function DepthChart({ book }: DepthChartProps) {
       </div>
     </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import type { AggregatedBook, VenueId, VenueOrderBook } from "@repo/shared-types";
 
 type ViewMode = "combined" | "polymarket" | "kalshi";
@@ -64,7 +64,7 @@ function buildBidRows(levels: DisplayLevel[]): RawBookRow[] {
   });
 }
 
-export function OrderBook({ aggregated, venues }: OrderBookProps) {
+export const OrderBook = memo(function OrderBook({ aggregated, venues }: OrderBookProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("combined");
 
   const { displayBids, displayAsks } = useMemo(() => {
@@ -117,13 +117,14 @@ export function OrderBook({ aggregated, venues }: OrderBookProps) {
             <button
               key={mode}
               onClick={() => setViewMode(mode)}
-              className={`px-2.5 py-1 text-[13px] font-medium rounded-lg transition-colors ${
+              className={`px-2 sm:px-2.5 py-1 text-[11px] sm:text-[13px] font-medium rounded-lg transition-colors ${
                 viewMode === mode
                   ? "bg-surface-3 text-accent"
                   : "text-text-muted hover:text-text-secondary"
               }`}
             >
-              {mode === "combined" ? "Combined" : mode === "polymarket" ? "Polymarket" : "Kalshi"}
+              <span className="sm:hidden">{mode === "combined" ? "All" : mode === "polymarket" ? "Poly" : "Kalshi"}</span>
+              <span className="hidden sm:inline">{mode === "combined" ? "Combined" : mode === "polymarket" ? "Polymarket" : "Kalshi"}</span>
             </button>
           ))}
         </div>
@@ -180,4 +181,4 @@ export function OrderBook({ aggregated, venues }: OrderBookProps) {
       )}
     </div>
   );
-}
+});

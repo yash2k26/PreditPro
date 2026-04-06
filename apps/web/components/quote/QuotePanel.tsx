@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import type { AggregatedBook, QuoteResult } from "@repo/shared-types";
 import { formatDollars, formatPrice, formatSize } from "../../lib/format";
 import { FillBreakdown } from "./FillBreakdown";
@@ -13,7 +13,7 @@ interface QuotePanelProps {
 
 const PRESET_AMOUNTS = [100, 500, 1000];
 
-export function QuotePanel({ onRequestQuote, quote, book }: QuotePanelProps) {
+export const QuotePanel = memo(function QuotePanel({ onRequestQuote, quote, book }: QuotePanelProps) {
   const [amount, setAmount] = useState("");
   const [side, setSide] = useState<"yes" | "no">("yes");
 
@@ -107,7 +107,7 @@ export function QuotePanel({ onRequestQuote, quote, book }: QuotePanelProps) {
               <button
                 key={preset}
                 onClick={() => setAmount(String(preset))}
-                className="depth-segment flex-1 h-8 text-[13px] font-semibold rounded-xl text-text-secondary hover:text-text-primary transition-colors"
+                className="depth-segment flex-1 h-9 text-[13px] font-semibold rounded-xl text-text-secondary hover:text-text-primary transition-colors active:scale-95"
               >
                 ${preset >= 1000 ? `${preset / 1000}k` : preset}
               </button>
@@ -182,4 +182,4 @@ export function QuotePanel({ onRequestQuote, quote, book }: QuotePanelProps) {
       </div>
     </div>
   );
-}
+});

@@ -18,7 +18,7 @@ function CategoryNav() {
   }, [activeSection]);
 
   return (
-    <div className="w-full px-6 pb-3">
+    <div className="w-full px-4 sm:px-6 pb-3 pt-1.5">
       <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
         {SECTION_ORDER.map((section, idx) => {
           const href = section === "trending" ? "/" : `/category/${section}`;
@@ -45,14 +45,16 @@ function CategoryNav() {
               {activeSection === section && (
                 <motion.div
                   layoutId="cat-active"
-                  className="absolute inset-0 rounded-[10px] nav-depth-pill-active"
+                  className="absolute inset-0 rounded-[10px] bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)] border border-border/60"
                   style={{ inset: 0 }}
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
               <Link
                 href={href}
-                className="nav-depth-pill relative z-10 whitespace-nowrap px-4 py-2 text-[13px] font-semibold inline-flex items-center gap-1.5"
+                className={`relative z-10 whitespace-nowrap px-4 py-2 text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                  activeSection === section ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
+                }`}
               >
                 {isTrending && (
                   <motion.svg
@@ -131,18 +133,7 @@ export function Header() {
     const root = document.documentElement;
     root.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
-
-    if (!hasHydratedTheme.current) {
-      hasHydratedTheme.current = true;
-      return;
-    }
-
-    root.classList.add("theme-transition");
-    const timer = window.setTimeout(() => {
-      root.classList.remove("theme-transition");
-    }, 320);
-
-    return () => window.clearTimeout(timer);
+    hasHydratedTheme.current = true;
   }, [theme]);
 
   const handleSearch = (val: string) => {
@@ -154,24 +145,33 @@ export function Header() {
     router.push(`/?${params.toString()}`);
   };
 
-  const toggleTheme = () => {
+  const toggleTheme = (e?: React.MouseEvent) => {
     const nextTheme: Theme = theme === "dark" ? "light" : "dark";
     const doc = document as ViewTransitionDoc;
     const supportsViewTransition = typeof doc.startViewTransition === "function";
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    if (supportsViewTransition && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (supportsViewTransition && !reducedMotion) {
+      // Set click origin for the spotlight animation
+      const x = e?.clientX ?? window.innerWidth / 2;
+      const y = e?.clientY ?? window.innerHeight / 2;
+      document.documentElement.style.setProperty("--x", `${x}px`);
+      document.documentElement.style.setProperty("--y", `${y}px`);
       doc.startViewTransition?.(() => {
         flushSync(() => setTheme(nextTheme));
       });
-      return;
+    } else {
+      // Fallback: CSS transition
+      const root = document.documentElement;
+      root.classList.add("theme-transition");
+      setTheme(nextTheme);
+      window.setTimeout(() => root.classList.remove("theme-transition"), 300);
     }
-
-    setTheme(nextTheme);
   };
 
   return (
-    <header className="border-b border-border bg-surface/95 backdrop-blur sticky top-0 z-50">
-      <div className="w-full flex items-center justify-between px-6 py-3 gap-6">
+    <header className="border-b border-border bg-surface/95 backdrop-blur-xl sticky top-0 z-50">
+      <div className="w-full flex items-center justify-between px-4 sm:px-6 py-3 gap-3 sm:gap-6">
         <div className="flex items-center gap-5 shrink-0">
           <Link href="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center">
@@ -187,7 +187,7 @@ export function Header() {
           </Link>
         </div>
 
-        <div className="flex-1 max-w-120 relative group">
+        <div className="hidden sm:flex flex-1 max-w-[480px] relative group">
           <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none z-10">
             <svg viewBox="0 0 24 24" className="w-4 h-4 text-text-muted group-focus-within:text-accent transition-colors" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8" />
@@ -199,14 +199,14 @@ export function Header() {
             placeholder="Search trending markets..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="depth-segment w-full h-9 pl-10 pr-3.5 rounded-xl text-[13px] font-medium text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-2 focus:ring-accent/15 transition-all"
+            className="depth-segment w-full h-9 pl-10 pr-4 rounded-xl text-[13px] font-medium text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-2 focus:ring-accent/15 transition-all"
           />
         </div>
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
-            onClick={toggleTheme}
-            className="h-9 w-9 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary flex items-center justify-center"
+            onClick={(e) => toggleTheme(e)}
+            className="h-9 w-9 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-text-secondary hover:text-text-primary flex items-center justify-center active:scale-95"
             aria-label="Toggle theme"
             title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
           >
@@ -221,14 +221,34 @@ export function Header() {
               </svg>
             )}
           </button>
-          <div className="flex items-center gap-1.5">
-            <button className="h-9 px-3.5 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-[13px] font-semibold text-text-secondary hover:text-text-primary">
+
+          <div className="hidden sm:flex items-center gap-1.5">
+            <button className="h-9 px-3.5 rounded-xl border border-border bg-surface-2 hover:bg-surface-3 transition-colors text-[13px] font-semibold text-text-secondary hover:text-text-primary active:scale-95">
               Sign in
             </button>
-            <button className="h-9 px-3.5 rounded-xl border border-accent/35 bg-accent/15 hover:bg-accent/25 transition-colors text-[13px] font-semibold text-text-primary">
+            <button className="h-9 px-3.5 rounded-xl border border-accent/35 bg-accent/15 hover:bg-accent/25 transition-colors text-[13px] font-semibold text-text-primary active:scale-95">
               Sign up
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Mobile search row */}
+      <div className="sm:hidden px-4 pb-2">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-3.5 flex items-center pointer-events-none z-10">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Search markets..."
+            value={search}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="depth-segment w-full h-9 pl-10 pr-4 rounded-xl text-[13px] font-medium text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent/40 focus:ring-2 focus:ring-accent/15 transition-all"
+          />
         </div>
       </div>
 

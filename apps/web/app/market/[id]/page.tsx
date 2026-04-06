@@ -150,14 +150,16 @@ export default function MarketPage({
   const { klines, ticks: binanceTicks, currentPrice, liveLineData } = useBinance(binanceSymbol);
 
   return (
-    <main className="page-shell min-h-screen space-y-4">
+    <main className="page-shell min-h-screen space-y-3 sm:space-y-4">
       {isLoading ? (
         <HeaderSkeleton />
       ) : (
         <div className="market-depth rounded-xl p-5">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <MarketHeader market={state.market} book={state.aggregated} />
-            <VenueStatus health={state.health} wsStatus={status} />
+            <div className="shrink-0">
+              <VenueStatus health={state.health} wsStatus={status} />
+            </div>
           </div>
         </div>
       )}
@@ -175,11 +177,26 @@ export default function MarketPage({
           liveLineData={liveLineData}
         />
       ) : !isLoading ? (
-        <ProbabilityChart history={state.priceHistory} book={state.aggregated} venues={state.venues} venueHistory={venueHistory} />
+        <div className="depth-card rounded-xl overflow-hidden">
+          <ProbabilityChart history={state.priceHistory} book={state.aggregated} venues={state.venues} venueHistory={venueHistory} />
+        </div>
       ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 space-y-4">
+        {/* Quote panel — top on mobile, right column on desktop */}
+        <div className="lg:col-start-3 lg:row-start-1">
+          {isLoading ? (
+            <QuotePanelSkeleton />
+          ) : (
+            <QuotePanel
+              onRequestQuote={requestQuote}
+              quote={state.lastQuote}
+              book={state.aggregated}
+            />
+          )}
+        </div>
+
+        <div className="lg:col-span-2 lg:col-start-1 lg:row-start-1 space-y-4">
           {isLoading ? (
             <OrderBookSkeleton />
           ) : (
@@ -203,18 +220,6 @@ export default function MarketPage({
                 <PriceChart history={state.priceHistory} />
               </div>
             </>
-          )}
-        </div>
-
-        <div>
-          {isLoading ? (
-            <QuotePanelSkeleton />
-          ) : (
-            <QuotePanel
-              onRequestQuote={requestQuote}
-              quote={state.lastQuote}
-              book={state.aggregated}
-            />
           )}
         </div>
       </div>

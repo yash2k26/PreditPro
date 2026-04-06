@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useEffect } from "react";
+import { memo, useMemo, useRef, useState, useEffect } from "react";
 import type { PricePoint } from "../../hooks/useOrderBook";
 import type { AggregatedBook, VenueId, VenueOrderBook } from "@repo/shared-types";
 import {
@@ -60,7 +60,7 @@ interface VenuePoint {
   pct: number;
 }
 
-export function ProbabilityChart({ history, book, venues, venueHistory }: ProbabilityChartProps) {
+export const ProbabilityChart = memo(function ProbabilityChart({ history, book, venues, venueHistory }: ProbabilityChartProps) {
   const [range, setRange] = useState<TimeRange>("ALL");
   const [source, setSource] = useState<Source>("combined");
 
@@ -186,9 +186,12 @@ export function ProbabilityChart({ history, book, venues, venueHistory }: Probab
   // Y-axis auto-scale
   const yDomain = useMemo(() => {
     if (chartData.length === 0) return [0, 100];
-    const values = chartData.map((d) => d.pct);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    let min = Infinity;
+    let max = -Infinity;
+    for (const d of chartData) {
+      if (d.pct < min) min = d.pct;
+      if (d.pct > max) max = d.pct;
+    }
     const dataRange = max - min;
     const pad = Math.max(dataRange * 0.15, 3);
     return [
@@ -213,9 +216,9 @@ export function ProbabilityChart({ history, book, venues, venueHistory }: Probab
   };
 
   return (
-    <div className="depth-card rounded-xl overflow-hidden">
+    <div className="flex flex-col w-full">
       {/* Header */}
-      <div className="px-4 pt-4 pb-2 flex items-start justify-between gap-4">
+      <div className="px-4 pt-4 pb-2 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-baseline gap-3">
             <span className="text-2xl font-bold tabular-nums" style={{ color: lineColor }}>
@@ -258,7 +261,8 @@ export function ProbabilityChart({ history, book, venues, venueHistory }: Probab
                     className="h-1.5 w-1.5 rounded-full"
                     style={{ backgroundColor: available ? s.color : "var(--color-text-muted)" , opacity: available ? 1 : 0.25 }}
                   />
-                  {s.label}
+                  <span className="hidden sm:inline">{s.label}</span>
+                  <span className="sm:hidden">{s.value === "combined" ? "All" : s.value === "polymarket" ? "Poly" : "Kalshi"}</span>
                 </span>
               </button>
             );
@@ -367,4 +371,4 @@ export function ProbabilityChart({ history, book, venues, venueHistory }: Probab
       </div>
     </div>
   );
-}
+});

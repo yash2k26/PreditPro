@@ -8,7 +8,6 @@ import type { ExploreMarket, MarketsResponse, ServerMessage } from "@repo/shared
 import { useWebSocket } from "../hooks/useWebSocket";
 import { SECTION_LABEL } from "../lib/market-sections";
 import { SortDropdown } from "../components/layout/SortDropdown";
-import { motion } from "motion/react"
 import {
   Line,
   LineChart,
@@ -93,23 +92,23 @@ function OutcomeButton({
   const isRose = color === "rose";
 
   return (
-    <div className={`flex flex-col gap-1 flex-1 p-2.5 rounded-xl border transition-all duration-200 group/btn ${
+    <div className={`flex flex-col justify-between flex-1 p-3.5 rounded-xl border transition-all duration-200 group/btn min-h-[76px] ${
       isEmerald 
-        ? "bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/30" 
+        ? "bg-emerald-500/5 border-emerald-500/10 hover:border-emerald-500/20" 
         : isRose 
-          ? "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/30" 
-          : "bg-surface-3 border-border hover:border-text-muted"
+          ? "bg-rose-500/5 border-rose-500/10 hover:border-rose-500/20" 
+          : "bg-surface-3 border-border hover:border-border/80"
     }`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[9px] font-black uppercase tracking-[0.1em] text-text-muted">{label}</span>
-        <div className={`w-1.5 h-1.5 rounded-full ${isEmerald ? "bg-emerald-500 shadow-[0_0_4px_var(--color-bid)]" : isRose ? "bg-rose-500 shadow-[0_0_4px_var(--color-ask)]" : "bg-text-muted"}`} />
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted">{label}</span>
+        <div className={`w-1.5 h-1.5 mt-1 rounded-full ${isEmerald ? "bg-emerald-500 shadow-[0_0_4px_var(--color-bid)]" : isRose ? "bg-rose-500 shadow-[0_0_4px_var(--color-ask)]" : "bg-text-muted"}`} />
       </div>
-      <div className="flex items-end justify-between">
-        <span className={`text-lg font-black tabular-nums leading-none ${isEmerald ? "text-emerald-400" : isRose ? "text-rose-400" : "text-text-primary"}`}>
+      <div className="flex border-t-0 items-end justify-between">
+        <span className={`text-[1.35rem] font-bold tabular-nums leading-none tracking-tight ${isEmerald ? "text-emerald-500" : isRose ? "text-rose-500" : "text-text-primary"}`}>
           {pctText}
         </span>
-        <div className={`text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md border ${
-          isEmerald ? "border-emerald-500/20 text-emerald-500" : isRose ? "border-rose-500/20 text-rose-500" : "border-border text-text-muted"
+        <div className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+          isEmerald ? "border-emerald-500/20 text-emerald-500 bg-emerald-500/10" : isRose ? "border-rose-500/20 text-rose-500 bg-rose-500/10" : "border-border text-text-muted bg-surface-2"
         }`}>
           Trade
         </div>
@@ -130,71 +129,56 @@ const MarketCard = memo(function MarketCard({ market }: { market: ExploreMarket 
   return (
     <Link
       href={`/market/${encodeURIComponent(market.id)}`}
-      className="depth-card depth-card-hover group relative block overflow-hidden rounded-[24px] p-0"
+      className="depth-card depth-card-hover group relative flex flex-col overflow-hidden rounded-[24px]"
     >
-      <div className="flex flex-col h-full">
-        {/* Header / Meta */}
-        <div className="p-5 pb-4">
-          <div className="flex items-center justify-between mb-3.5">
-            <MarketAvatar market={market} />
-            <div className="flex flex-col items-end gap-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-text-muted/80">
-                {market.category || "General"}
-              </span>
-              <div className="flex gap-1.5">
-                {market.venues.map((v) => (
-                  <span key={v.venue} className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase border ${
-                    v.venue === 'polymarket' ? 'border-polymarket/30 text-polymarket' : 'border-kalshi/30 text-kalshi'
-                  }`}>
-                    {v.venue === 'polymarket' ? 'Poly' : 'Kalshi'}
-                  </span>
-                ))}
-              </div>
+      {/* Header / Meta */}
+      <div className="p-5 pb-3">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <MarketAvatar market={market} />
+          <div className="flex flex-col items-end gap-1.5 pt-0.5">
+            <span className="text-[11px] font-extrabold uppercase tracking-widest text-text-muted">
+              {market.category || "General"}
+            </span>
+            <div className="flex gap-1.5">
+              {market.venues.map((v) => (
+                <span key={v.venue} className={`px-2 py-0.5 rounded-md text-[9px] font-bold uppercase border ${
+                  v.venue === 'polymarket' ? 'border-[#3B82F6]/20 text-[#3B82F6] bg-[#3B82F6]/5' : 'border-[#F59E0B]/20 text-[#F59E0B] bg-[#F59E0B]/5'
+                }`}>
+                  {v.venue === 'polymarket' ? 'Poly' : 'Kalshi'}
+                </span>
+              ))}
             </div>
           </div>
-          <h3 className="line-clamp-2 text-[17px] leading-[1.35] font-extrabold text-text-primary tracking-tight group-hover:text-accent transition-colors">
-            {market.question}
-          </h3>
         </div>
+        <h3 className="line-clamp-2 text-[1.125rem] leading-[1.3] font-bold text-text-primary tracking-tight group-hover:text-accent transition-colors">
+          {market.question}
+        </h3>
+      </div>
 
-        {/* Trade Bar (Outcome Buttons) */}
-        <div className="px-5 mb-5 flex gap-2.5">
-          <OutcomeButton
-            label={yesLabel}
-            pctText={yesPct}
-            color={yesValue !== null && noValue !== null && yesValue >= noValue ? "emerald" : "neutral"}
-          />
-          <OutcomeButton
-            label={noLabel}
-            pctText={noPct}
-            color={noValue !== null && yesValue !== null && noValue > yesValue ? "emerald" : "neutral"}
-          />
-        </div>
+      {/* Trade Bar (Outcome Buttons) */}
+      <div className="px-5 mb-5 mt-1 flex gap-3">
+        <OutcomeButton
+          label={yesLabel}
+          pctText={yesPct}
+          color={yesValue !== null && noValue !== null && yesValue >= noValue ? "emerald" : "neutral"}
+        />
+        <OutcomeButton
+          label={noLabel}
+          pctText={noPct}
+          color={noValue !== null && yesValue !== null && noValue > yesValue ? "emerald" : "neutral"}
+        />
+      </div>
 
-        {/* Footer Bar */}
-        <div className="mt-auto px-5 py-3.5 bg-white/[0.02] border-t border-white/[0.03] flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <svg className="w-2.5 h-2.5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor font-bold">
-                <path strokeWidth="3" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <div className="flex flex-col">
-                <span className="text-[11px] text-text-secondary font-bold tabular-nums leading-none mb-0.5">{formatNum(market.volume24h)}</span>
-                <span className="text-[8px] uppercase font-bold text-text-muted tracking-wide">Vol</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <svg className="w-2.5 h-2.5 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor font-bold">
-                <path strokeWidth="3" d="M3 6h18M3 12h18M3 18h12" />
-              </svg>
-              <div className="flex flex-col">
-                <span className="text-[11px] text-text-secondary font-bold tabular-nums leading-none mb-0.5">{formatNum(market.liquidity)}</span>
-                <span className="text-[8px] uppercase font-bold text-text-muted tracking-wide">Liq</span>
-              </div>
-            </div>
+      {/* Footer Bar */}
+      <div className="mt-auto px-4 sm:px-5 py-3 sm:py-4 border-t border-border flex items-center justify-between bg-surface-2/30">
+        <div className="flex items-center gap-5 sm:gap-7">
+          <div className="flex flex-col items-start gap-0.5">
+            <span className="text-[13px] text-text-primary font-bold tabular-nums leading-none tracking-tight">{formatNum(market.volume24h)}</span>
+            <span className="text-[10px] font-semibold uppercase text-text-muted tracking-widest">Vol</span>
           </div>
-          <div className="text-[8px] font-black uppercase text-accent tracking-tighter bg-accent/5 px-2 py-1 rounded-lg border border-accent/20 opacity-0 group-hover:opacity-100 transition-opacity">
-            Live Feed
+          <div className="flex flex-col items-start gap-0.5">
+            <span className="text-[13px] text-text-primary font-bold tabular-nums leading-none tracking-tight">{formatNum(market.liquidity)}</span>
+            <span className="text-[10px] font-semibold uppercase text-text-muted tracking-widest">Liq</span>
           </div>
         </div>
       </div>
@@ -235,13 +219,14 @@ const TrendingCarousel = memo(function TrendingCarousel({
   onSelect: (index: number) => void;
   liveHistory: Record<string, { time: number; yes: number }[]>;
 }) {
-  const [bookmarks, setBookmarks] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set<string>();
+  const [bookmarks, setBookmarks] = useState<Set<string>>(new Set<string>());
+
+  useEffect(() => {
     try {
       const saved = localStorage.getItem("bookmarked-markets");
-      return saved ? new Set(JSON.parse(saved) as string[]) : new Set<string>();
-    } catch { return new Set<string>(); }
-  });
+      if (saved) setBookmarks(new Set(JSON.parse(saved) as string[]));
+    } catch { /* ignore */ }
+  }, []);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const toggleBookmark = (e: React.MouseEvent, id: string) => {
@@ -268,12 +253,11 @@ const TrendingCarousel = memo(function TrendingCarousel({
 
   return (
     <section className="mb-7">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-text-muted">Trending Now</h2>
-        </div>
-        <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">Updated every minute</span>
+      <div className="flex items-center justify-between mb-4 px-1">
+        <h2 className="text-[13px] font-semibold text-text-primary">
+          Trending
+        </h2>
+        <span className="text-[11px] font-medium text-text-muted">Live data</span>
       </div>
 
       <div className="relative overflow-hidden">
@@ -311,7 +295,7 @@ const TrendingCarousel = memo(function TrendingCarousel({
               <div key={market.id} className="min-w-full">
                 <Link
                   href={`/market/${encodeURIComponent(market.id)}`}
-                  className="depth-card block relative rounded-3xl p-5 md:p-6 active:scale-[0.995] transition-transform"
+                  className="depth-card block relative rounded-[20px] p-5 active:scale-[0.995] transition-transform"
                 >
                   {/* Header row: image + meta + title | actions */}
                   <div className="flex items-start justify-between gap-4 mb-5">
@@ -320,34 +304,34 @@ const TrendingCarousel = memo(function TrendingCarousel({
                         <img
                           src={imageUrl}
                           alt={market.question}
-                          className="h-11 w-11 rounded-xl object-cover border border-white/15 shrink-0 mt-0.5"
+                          className="h-10 w-10 rounded-lg object-cover border border-white/10 shrink-0 mt-0.5"
                           loading="eager"
                           decoding="async"
                         />
                       ) : (
-                        <div className="h-11 w-11 rounded-xl border border-border bg-surface-3 shrink-0 mt-0.5" />
+                        <div className="h-10 w-10 rounded-lg border border-border bg-surface-3 shrink-0 mt-0.5" />
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-sm font-medium text-text-muted">
+                          <span className="text-[12px] font-medium text-text-muted">
                             {(market.category || "Other")} · {market.venues[0]?.venue === "kalshi" ? "Kalshi" : "Polymarket"}
                           </span>
                           {market.venues.map((v) => (
-                            <span key={v.venue} className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase border ${v.venue === "polymarket" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-orange-500/10 text-orange-400 border-orange-500/20"}`}>
+                            <span key={v.venue} className={`px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase border ${v.venue === "polymarket" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-orange-500/10 text-orange-400 border-orange-500/20"}`}>
                               {v.venue === "polymarket" ? "Poly" : "Kalshi"}
                             </span>
                           ))}
                         </div>
-                        <h3 className="text-2xl md:text-[1.75rem] font-extrabold leading-tight tracking-tight text-text-primary line-clamp-2">
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-bold leading-tight tracking-tight text-text-primary line-clamp-2">
                           {market.question}
                         </h3>
                       </div>
                     </div>
-                    <div className="hidden md:flex items-center gap-2 shrink-0">
+                    <div className="hidden sm:flex items-center gap-2 shrink-0">
                       <button
                         onClick={(e) => copyLink(e, market.id)}
                         title={copiedId === market.id ? "Copied!" : "Copy link"}
-                        className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${copiedId === market.id ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-border bg-surface-2/60 hover:bg-surface-3"}`}
+                        className={`h-8 w-8 rounded-lg border transition-colors flex items-center justify-center ${copiedId === market.id ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400" : "border-border bg-surface-2 hover:bg-surface-3"}`}
                       >
                         {copiedId === market.id ? (
                           <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -363,7 +347,7 @@ const TrendingCarousel = memo(function TrendingCarousel({
                       <button
                         onClick={(e) => toggleBookmark(e, market.id)}
                         title={bookmarks.has(market.id) ? "Remove bookmark" : "Bookmark"}
-                        className={`h-8 w-8 rounded-full border transition-colors flex items-center justify-center ${bookmarks.has(market.id) ? "border-amber-500/50 bg-amber-500/10 text-amber-400" : "border-border bg-surface-2/60 hover:bg-surface-3"}`}
+                        className={`h-8 w-8 rounded-lg border transition-colors flex items-center justify-center ${bookmarks.has(market.id) ? "border-amber-500/50 bg-amber-500/10 text-amber-400" : "border-border bg-surface-2 hover:bg-surface-3"}`}
                       >
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill={bookmarks.has(market.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
@@ -373,25 +357,25 @@ const TrendingCarousel = memo(function TrendingCarousel({
                   </div>
 
                   {/* Outcomes + Chart */}
-                  <div className="grid grid-cols-1 lg:grid-cols-[0.3fr_0.7fr] gap-5 items-stretch">
+                  <div className="grid grid-cols-1 sm:grid-cols-[0.3fr_0.7fr] gap-4 sm:gap-5 items-stretch">
                     {/* Left: outcomes once, clean */}
-                    <div className="min-w-0 flex flex-col gap-3">
-                      <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/8 px-4 py-3 flex flex-col justify-center">
-                        <div className="text-[10px] uppercase tracking-wider font-semibold text-emerald-400/70 mb-1">{yesLabel}</div>
-                        <div key={`y-${formatPct(currentYes)}`} className="live-value text-3xl font-black text-emerald-400 tabular-nums">{formatPct(currentYes)}</div>
+                    <div className="min-w-0 flex flex-row sm:flex-col gap-3">
+                      <div className="flex-1 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex flex-col justify-center transition-colors hover:bg-emerald-500/10">
+                        <div className="text-[10px] uppercase tracking-wider font-semibold text-emerald-500/80 mb-1">{yesLabel}</div>
+                        <div key={`y-${formatPct(currentYes)}`} className="live-value text-3xl font-bold text-emerald-500 tabular-nums">{formatPct(currentYes)}</div>
                       </div>
-                      <div className="flex-1 rounded-xl border border-rose-500/20 bg-rose-500/8 px-4 py-3 flex flex-col justify-center">
-                        <div className="text-[10px] uppercase tracking-wider font-semibold text-rose-400/70 mb-1">{noLabel}</div>
-                        <div key={`n-${formatPct(currentNo)}`} className="live-value text-3xl font-black text-rose-400 tabular-nums">{formatPct(currentNo)}</div>
+                      <div className="flex-1 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 flex flex-col justify-center transition-colors hover:bg-rose-500/10">
+                        <div className="text-[10px] uppercase tracking-wider font-semibold text-rose-500/80 mb-1">{noLabel}</div>
+                        <div key={`n-${formatPct(currentNo)}`} className="live-value text-3xl font-bold text-rose-500 tabular-nums">{formatPct(currentNo)}</div>
                       </div>
-                      <div className="flex items-center gap-5 px-1 pt-1">
+                      <div className="hidden sm:flex items-center gap-5 px-1 pt-1 opacity-80">
                         <div>
-                          <div className="text-[9px] font-bold uppercase tracking-widest text-text-muted mb-0.5">Vol 24H</div>
-                          <div className="text-sm font-bold text-text-primary">{formatNum(market.volume24h)}</div>
+                          <div className="text-[10px] uppercase font-semibold text-text-muted mb-0.5 tracking-wide">Vol 24H</div>
+                          <div className="text-sm font-semibold text-text-primary">{formatNum(market.volume24h)}</div>
                         </div>
                         <div>
-                          <div className="text-[9px] font-bold uppercase tracking-widest text-text-muted mb-0.5">Liquidity</div>
-                          <div className="text-sm font-bold text-text-primary">{formatNum(market.liquidity)}</div>
+                          <div className="text-[10px] uppercase font-semibold text-text-muted mb-0.5 tracking-wide">Liquidity</div>
+                          <div className="text-sm font-semibold text-text-primary">{formatNum(market.liquidity)}</div>
                         </div>
                       </div>
                     </div>
@@ -401,25 +385,25 @@ const TrendingCarousel = memo(function TrendingCarousel({
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <div className="flex flex-wrap items-center gap-3">
                           <span className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
-                            <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                            {yesLabel} <span key={`ly-${formatPct(currentYes)}`} className="live-value font-semibold text-emerald-400">{formatPct(currentYes)}</span>
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            {yesLabel} <span key={`ly-${formatPct(currentYes)}`} className="live-value font-semibold text-emerald-500">{formatPct(currentYes)}</span>
                           </span>
                           <span className="inline-flex items-center gap-1.5 text-xs text-text-secondary">
-                            <span className="h-2 w-2 rounded-full bg-rose-400" />
-                            {noLabel} <span key={`ln-${formatPct(currentNo)}`} className="live-value font-semibold text-rose-400">{formatPct(currentNo)}</span>
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                            {noLabel} <span key={`ln-${formatPct(currentNo)}`} className="live-value font-semibold text-rose-500">{formatPct(currentNo)}</span>
                           </span>
                         </div>
-                        <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           LIVE
                         </span>
                       </div>
-                      <div className="flex-1 min-h-56">
+                      <div className="flex-1 min-h-40 sm:min-h-55">
                         {history.length >= 2 ? (
                           <ResponsiveContainer width="100%" height="100%">
                             <LineChart
                               data={history.map(p => ({ time: p.time, yes: p.yes * 100, no: (1 - p.yes) * 100 }))}
-                              margin={{ top: 6, right: 10, bottom: 4, left: 0 }}
+                              margin={{ top: 6, right: 10, bottom: 4, left: -6 }}
                             >
                               <XAxis
                                 dataKey="time"
@@ -433,9 +417,10 @@ const TrendingCarousel = memo(function TrendingCarousel({
                                     : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
                                 }}
                                 tick={{ fill: "var(--color-text-muted)", fontSize: 10 }}
-                                axisLine={false}
+                                axisLine={{ stroke: "var(--color-border)" }}
                                 tickLine={false}
                                 minTickGap={60}
+                                dy={10}
                               />
                               <YAxis
                                 domain={[yMin, yMax]}
@@ -446,12 +431,12 @@ const TrendingCarousel = memo(function TrendingCarousel({
                                 width={36}
                               />
                               <Tooltip
-                                labelFormatter={(ts: number) => new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                labelFormatter={(ts: number) => new Date(ts).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                                 formatter={(value: number, name: string) => [`${value.toFixed(1)}%`, name === "yes" ? yesLabel : noLabel]}
                                 contentStyle={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: 10, color: "var(--color-text-primary)", fontSize: 12 }}
                               />
-                              <Line type="stepAfter" dataKey="yes" stroke="#22c55e" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={{ r: 3.5, fill: "#22c55e", stroke: "var(--color-surface-2)", strokeWidth: 2 }} />
-                              <Line type="stepAfter" dataKey="no" stroke="#ef4444" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={{ r: 3.5, fill: "#ef4444", stroke: "var(--color-surface-2)", strokeWidth: 2 }} />
+                              <Line type="stepAfter" dataKey="yes" stroke="#10b981" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={{ r: 4, fill: "#10b981", stroke: "var(--color-surface)", strokeWidth: 2 }} />
+                              <Line type="stepAfter" dataKey="no" stroke="#f43f5e" strokeWidth={1.5} dot={false} isAnimationActive={false} activeDot={{ r: 4, fill: "#f43f5e", stroke: "var(--color-surface)", strokeWidth: 2 }} />
                             </LineChart>
                           </ResponsiveContainer>
                         ) : (
@@ -483,7 +468,13 @@ const TrendingCarousel = memo(function TrendingCarousel({
   );
 });
 
-// Isolated so hover state never re-renders the parent grid
+const VENUE_OPTIONS = ["all", "polymarket", "kalshi"] as const;
+
+// pill width (w-22.5 = 90px), gap (gap-1 = 4px), container padding (p-1 = 4px)
+const PILL_W = 90;
+const PILL_GAP = 4;
+const PILL_PAD = 4;
+
 const VenueFilterPills = memo(function VenueFilterPills({
   active,
   onChange,
@@ -491,36 +482,28 @@ const VenueFilterPills = memo(function VenueFilterPills({
   active: VenueFilter;
   onChange: (v: VenueFilter) => void;
 }) {
-  const [hoverActive, setHoverActive] = useState<VenueFilter>(active);
+  const activeIdx = Math.max(0, VENUE_OPTIONS.indexOf(active as typeof VENUE_OPTIONS[number]));
   return (
-    <div className="nav-depth-wrap flex gap-1 w-fit rounded-xl p-1">
-      {(["all", "polymarket", "kalshi"] as const).map((v, idx) => (
-        <motion.button
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 + idx * 0.05, duration: 0.3 }}
-          onMouseEnter={() => setHoverActive(v)}
-          onMouseLeave={() => setHoverActive(active)}
-          onClick={() => onChange(v)}
+    <div className="nav-depth-wrap relative flex gap-1 w-fit rounded-xl p-1">
+      <div
+        className="absolute top-1 bottom-1 rounded-[10px] nav-depth-pill-active pointer-events-none"
+        style={{
+          width: PILL_W,
+          left: PILL_PAD,
+          transform: `translateX(${activeIdx * (PILL_W + PILL_GAP)}px)`,
+          transition: "transform 220ms cubic-bezier(0.23, 1, 0.32, 1)",
+        }}
+      />
+      {VENUE_OPTIONS.map((v) => (
+        <button
           key={v}
-          className="nav-depth-pill relative w-22.5 text-[11px] font-bold uppercase tracking-wider"
+          onClick={() => onChange(v)}
+          className={`relative z-10 w-22.5 h-8 flex items-center justify-center text-[11px] font-bold uppercase tracking-wider transition-colors duration-150 ${
+            active === v ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
+          }`}
         >
-          {hoverActive === v && hoverActive !== active && (
-            <motion.div
-              layoutId="venue-hover"
-              className="absolute inset-0 rounded-[10px] bg-surface-hover/60 border border-border/40"
-              transition={{ type: "spring", stiffness: 500, damping: 35 }}
-            />
-          )}
-          {active === v && (
-            <motion.div
-              layoutId="venue-active"
-              className="absolute inset-0 rounded-[10px] nav-depth-pill-active"
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            />
-          )}
-          <span className="relative z-10">{v === "all" ? "All" : v}</span>
-        </motion.button>
+          {v === "all" ? "All" : v}
+        </button>
       ))}
     </div>
   );
@@ -685,14 +668,20 @@ function ExploreContent() {
   // Connect to the currently visible trending market
   useWebSocket(activeMarketId, handleTrendingWs);
 
-  // Sync ref → state every 500ms for smooth chart redraws
+  // Sync ref → state every 800ms, only for the active market and only if data changed
   useEffect(() => {
     if (!activeMarketId) return;
     const id = activeMarketId;
+    let lastLen = liveHistoryRef.current[id]?.length ?? 0;
     const timer = setInterval(() => {
       const next = liveHistoryRef.current[id];
-      if (next) setLiveHistory(prev => ({ ...prev, [id]: next }));
-    }, 500);
+      if (!next) return;
+      const newLen = next.length;
+      if (newLen !== lastLen) {
+        lastLen = newLen;
+        setLiveHistory(prev => ({ ...prev, [id]: next }));
+      }
+    }, 800);
     return () => clearInterval(timer);
   }, [activeMarketId]);
 

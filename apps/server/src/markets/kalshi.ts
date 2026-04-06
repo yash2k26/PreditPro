@@ -36,6 +36,54 @@ function pickImageUrl(market: KalshiRawMarket): string | null {
   return candidate.startsWith("http") ? candidate : null;
 }
 
+/** Map Kalshi ticker prefix → human-readable category */
+const TICKER_CATEGORY: Record<string, string> = {
+  // Basketball
+  NBA: "Sports", NBAGAME: "Sports", NBASPREAD: "Sports", NBATOTAL: "Sports",
+  NCAAMB: "Sports", NCAAMBGAME: "Sports", NCAAMBSPREAD: "Sports", NCAAMBTOTAL: "Sports",
+  NCAAWB: "Sports", NCAAWBGAME: "Sports",
+  // Football
+  NFL: "Sports", NFLGAME: "Sports", NFLSPREAD: "Sports", NFLTOTAL: "Sports",
+  NCAAFB: "Sports", NCAAFBGAME: "Sports",
+  // Baseball
+  MLB: "Sports", MLBGAME: "Sports",
+  // Hockey
+  NHL: "Sports", NHLGAME: "Sports",
+  // Soccer
+  MLS: "Sports", MLSGAME: "Sports", EPL: "Sports", UEFA: "Sports",
+  // Tennis
+  ATP: "Sports", ATPMATCH: "Sports", ATPGAME: "Sports", ATPSET: "Sports",
+  ATPCHALLENGER: "Sports", ATPCHALLENGERMATCH: "Sports", ATPSETWINNER: "Sports",
+  WTA: "Sports", WTAMATCH: "Sports", WTAGAME: "Sports",
+  // Esports
+  CS2: "Sports", CS2GAME: "Sports", LOL: "Sports", LOLGAME: "Sports",
+  DOTA: "Sports", CSGO: "Sports",
+  // Crypto / Finance
+  BTC: "Crypto", BTCD: "Crypto", ETH: "Crypto", ETHD: "Crypto",
+  SOL: "Crypto", SOLD: "Crypto", XRP: "Crypto",
+  SP500: "Finance", NASDAQ: "Finance", FED: "Finance",
+  AAA: "Finance", AAAGASW: "Finance", GASW: "Finance",
+  // Politics
+  PRES: "Politics", SENATE: "Politics", HOUSE: "Politics", GOV: "Politics",
+  ELEC: "Politics", DEM: "Politics", REP: "Politics",
+  // Weather
+  HIGH: "Weather", HIGHCHI: "Weather", HIGHNY: "Weather", HIGHLA: "Weather",
+  LOW: "Weather", PRECIP: "Weather", SNOW: "Weather",
+  // Entertainment
+  NETFLIX: "Entertainment", NETFLIXRANK: "Entertainment", NETFLIXRANKSHOW: "Entertainment",
+  BOX: "Entertainment", OSCAR: "Entertainment", GRAMMY: "Entertainment",
+};
+
+function categoryFromTicker(ticker: string): string {
+  // Strip "KX" prefix, then try progressively shorter prefixes
+  const base = ticker.replace(/^KX/, "");
+  for (let len = base.length; len >= 2; len--) {
+    const prefix = base.slice(0, len).replace(/\d.*$/, ""); // strip trailing numbers
+    if (TICKER_CATEGORY[prefix]) return TICKER_CATEGORY[prefix]!;
+  }
+  return "General";
+}
+
 function parseDollars(s: string | undefined | null): number | null {
   if (!s) return null;
   const n = parseFloat(s);
@@ -91,7 +139,7 @@ export async function fetchKalshiMarkets(): Promise<ExploreMarket[]> {
         id: `kalshi-${m.ticker}`,
         slug: m.ticker.toLowerCase(),
         question,
-        category: m.category || "Other",
+        category: categoryFromTicker(m.ticker),
         imageUrl,
         outcomes: ["Yes", "No"],
         yesPrice,

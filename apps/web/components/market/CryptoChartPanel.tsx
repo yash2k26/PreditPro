@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "motion/react";
 import type { Kline, BinanceTick } from "../../hooks/useBinance";
@@ -45,7 +45,7 @@ function fmt(v: number) {
   return `$${v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function CryptoChartPanel({
+export const CryptoChartPanel = memo(function CryptoChartPanel({
   history, book, venues, venueHistory,
   symbol, klines, ticks, currentPrice, liveLineData,
 }: Props) {
@@ -76,12 +76,17 @@ export function CryptoChartPanel({
 
   const liveCandle = useMemo(() => {
     if (ticks.length === 0 || !currentPrice) return undefined;
-    const prices = ticks.map((t) => t.price);
+    let high = -Infinity;
+    let low = Infinity;
+    for (const t of ticks) {
+      if (t.price > high) high = t.price;
+      if (t.price < low) low = t.price;
+    }
     return {
       time: Math.floor(ticks[0]!.time / 1000),
       open: ticks[0]!.price,
-      high: Math.max(...prices),
-      low: Math.min(...prices),
+      high,
+      low,
       close: currentPrice,
     };
   }, [ticks, currentPrice]);
@@ -193,4 +198,4 @@ export function CryptoChartPanel({
       )}
     </div>
   );
-}
+});

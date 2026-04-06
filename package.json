@@ -1,9 +1,9 @@
 {
   "name": "aggregator",
   "private": true,
-  "scripts": {
+  "scripts": { 
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev -- --port 3005",
     "dev:clean": "node -e \"try{require('child_process').execSync('taskkill /F /IM node.exe',{stdio:'ignore'})}catch(e){}\" && turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
@@ -15,7 +15,7 @@
     "turbo": "^2.8.17",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=18"
   },
