@@ -250,6 +250,15 @@ html.theme-transition *::after {
     0 4px 12px rgba(0, 0, 0, calc(var(--shadow-opacity) * 0.5));
 }
 
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 @keyframes live-flash {
   0% {
     opacity: 1;

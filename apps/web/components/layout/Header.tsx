@@ -10,19 +10,15 @@ import { SECTION_LABEL, SECTION_ORDER } from "../../lib/market-sections";
 function CategoryNav() {
   const pathname = usePathname();
   const activeSection = pathname === "/" ? "trending" : pathname.startsWith("/category/") ? (pathname.split("/")[2] ?? null) : null;
-  const [hoverCat, setHoverCat] = useState<string | null>(activeSection);
-
-  // Sync when route changes
-  useEffect(() => {
-    setHoverCat(activeSection);
-  }, [activeSection]);
 
   return (
-    <div className="w-full px-4 sm:px-6 pb-3 pt-1.5">
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+    <div className="w-full px-4 sm:px-6 pb-3 pt-2">
+      <div className="nav-depth-wrap px-1.5 py-1.5 sm:px-2 sm:py-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar snap-x snap-mandatory">
         {SECTION_ORDER.map((section, idx) => {
           const href = section === "trending" ? "/" : `/category/${section}`;
           const isTrending = section === "trending";
+          const isActive = activeSection === section;
 
           return (
             <motion.div
@@ -30,30 +26,13 @@ function CategoryNav() {
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 + idx * 0.03, duration: 0.3 }}
-              onMouseEnter={() => setHoverCat(section)}
-              onMouseLeave={() => setHoverCat(activeSection ?? null)}
               whileHover={isTrending ? "hover" : undefined}
-              className="relative overflow-hidden"
+              className="relative shrink-0 snap-start"
             >
-              {hoverCat === section && hoverCat !== activeSection && (
-                <motion.div
-                  layoutId="cat-hover"
-                  className="absolute inset-0 rounded-[10px] bg-surface-hover/60 border border-border/40"
-                  transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                />
-              )}
-              {activeSection === section && (
-                <motion.div
-                  layoutId="cat-active"
-                  className="absolute inset-0 rounded-[10px] bg-surface shadow-[0_1px_3px_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.02)] border border-border/60"
-                  style={{ inset: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
               <Link
                 href={href}
-                className={`relative z-10 whitespace-nowrap px-4 py-2 text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors ${
-                  activeSection === section ? "text-text-primary" : "text-text-muted hover:text-text-secondary"
+                className={`nav-depth-pill whitespace-nowrap h-8 sm:h-9 px-3 sm:px-4 text-[12px] sm:text-[13px] font-semibold inline-flex items-center gap-1.5 ${
+                  isActive ? "nav-depth-pill-active" : ""
                 }`}
               >
                 {isTrending && (
@@ -91,6 +70,7 @@ function CategoryNav() {
             </motion.div>
           );
         })}
+        </div>
       </div>
     </div>
   );
