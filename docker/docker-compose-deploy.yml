@@ -2,7 +2,7 @@ services:
   server:
     image: ghcr.io/yash2k26/predictpro/backend:latest
     ports:
-      - "3001:3001"
+      - "1001:3001"
     environment:
       - PORT=3001
       - CORS_ORIGIN=https://predictpro.yashb.xyz
@@ -17,7 +17,7 @@ services:
   web:
     image: ghcr.io/yash2k26/predictpro/web:latest
     ports:
-      - "3000:3000"
+      - "1000:3000"
     depends_on:
       server:
         condition: service_healthy
